@@ -81,3 +81,16 @@ jobs:
             release/*.deb
             release/*.yml
           if-no-files-found: ignore
+  release-notes:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update release notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --notes-file RELEASE_NOTES.md

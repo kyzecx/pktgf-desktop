@@ -63,10 +63,17 @@ export function FloatingWindow({
       aria-label={typeof title === 'string' ? title : undefined}
       aria-modal="false"
       className={cn(
-        'pkt-no-drag pkt-fade-in fixed flex flex-col overflow-hidden rounded-xl border border-border/80 bg-surface/95 shadow-[0_24px_60px_-16px_rgba(0,0,0,0.75)] backdrop-blur-md',
+        'pkt-no-drag pkt-fade-in fixed flex flex-col overflow-hidden rounded-xl border border-border/80 bg-surface/95 backdrop-blur-md',
         className,
       )}
-      style={{ left: current.x, top: current.y, width, maxHeight: '76vh', zIndex }}
+      style={{
+        left: current.x,
+        top: current.y,
+        width,
+        maxHeight: '76vh',
+        zIndex,
+        boxShadow: 'var(--pkt-shadow-lg)',
+      }}
       onPointerDown={() => focus(id)}
     >
       <div

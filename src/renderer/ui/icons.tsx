@@ -81,6 +81,74 @@ export function IconPaw({ className }: IconProps): React.ReactElement {
   )
 }
 
+/** 图鉴：一本摊开的书 */
+export function IconBook({ className }: IconProps): React.ReactElement {
+  return (
+    <svg
+      viewBox="0 0 20 20"
+      className={base(className)}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+    >
+      <path d="M3 4.5c2.5-.8 4.5-.3 7 1.2v10c-2.5-1.5-4.5-2-7-1.2z" strokeLinejoin="round" />
+      <path d="M17 4.5c-2.5-.8-4.5-.3-7 1.2v10c2.5-1.5 4.5-2 7-1.2z" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+/** 浅色模式 */
+export function IconSun({ className }: IconProps): React.ReactElement {
+  return (
+    <svg
+      viewBox="0 0 20 20"
+      className={base(className)}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+    >
+      <circle cx="10" cy="10" r="3.2" />
+      <path
+        d="M10 2.5v2M10 15.5v2M2.5 10h2M15.5 10h2M4.7 4.7l1.4 1.4M13.9 13.9l1.4 1.4M15.3 4.7l-1.4 1.4M6.1 13.9l-1.4 1.4"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}
+
+/** 深色模式 */
+export function IconMoon({ className }: IconProps): React.ReactElement {
+  return (
+    <svg
+      viewBox="0 0 20 20"
+      className={base(className)}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+    >
+      <path d="M16.2 12.4A6.5 6.5 0 0 1 7.6 3.8 6.5 6.5 0 1 0 16.2 12.4z" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+/** 列表设置 */
+export function IconList({ className }: IconProps): React.ReactElement {
+  return (
+    <svg
+      viewBox="0 0 20 20"
+      className={base(className)}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+    >
+      <rect x="3" y="4" width="3" height="3" rx="0.5" />
+      <rect x="3" y="8.5" width="3" height="3" rx="0.5" />
+      <rect x="3" y="13" width="3" height="3" rx="0.5" />
+      <path d="M8.5 5.5h8M8.5 10h8M8.5 14.5h8" strokeLinecap="round" />
+    </svg>
+  )
+}
+
 export function IconSettings({ className }: IconProps): React.ReactElement {
   return (
     <svg

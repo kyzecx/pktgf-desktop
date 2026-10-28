@@ -1,8 +1,8 @@
 import * as React from 'react'
 
-export type Route = 'launcher' | 'outfits' | 'saves' | 'settings'
+export type Route = 'launcher' | 'outfits' | 'catalog' | 'saves' | 'settings'
 
-const ROUTES: Route[] = ['launcher', 'outfits', 'saves', 'settings']
+const ROUTES: Route[] = ['launcher', 'outfits', 'catalog', 'saves', 'settings']
 
 function parse(hash: string): Route {
   const name = hash.replace(/^#\/?/, '').split('/')[0] ?? ''

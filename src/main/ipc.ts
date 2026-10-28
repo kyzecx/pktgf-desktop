@@ -1,12 +1,15 @@
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
+import { randomUUID } from 'node:crypto'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
-import { dirname, resolve } from 'node:path'
+import { dirname, resolve, sep } from 'node:path'
 
 import {
   IPC,
   type AppInfo,
   type SaveRecord,
   type CatalogPayload,
+  type ChooseDirectoryResult,
+  type ExportFilesRequest,
   type ResourceVersionStatus,
   type OpenFileRequest,
   type OpenFileResult,
@@ -19,6 +22,9 @@ import { dataDir } from './services/paths'
 import { clearResourceCache, getCacheStats } from './services/resource-cache'
 import { deleteSave, listSaves, putSave } from './services/saves'
 import { checkResourceVersion, getResourceVersion } from './services/version-watch'
+
+/** 只在用户通过系统目录选择器授权的根目录下写图鉴文件。 */
+const exportRoots = new Map<string, string>()
 
 export function registerIpcHandlers(): void {
   ipcMain.handle(IPC.appInfo, async (): Promise<AppInfo> => ({
@@ -81,6 +87,35 @@ export function registerIpcHandlers(): void {
     },
   )
 
+  ipcMain.handle(IPC.chooseDirectory, async (): Promise<ChooseDirectoryResult | null> => {
+    const window = BrowserWindow.getFocusedWindow()
+    const options = { properties: ['openDirectory' as const, 'createDirectory' as const] }
+    const result = window
+      ? await dialog.showOpenDialog(window, options)
+      : await dialog.showOpenDialog(options)
+    const root = result.filePaths[0]
+    if (result.canceled || !root) return null
+    const token = randomUUID()
+    exportRoots.set(token, resolve(root))
+    return { token, path: root }
+  })
+
+  ipcMain.handle(IPC.writeExportFiles, async (_event, request: ExportFilesRequest) => {
+    const root = exportRoots.get(request.token)
+    if (!root) throw new Error('导出目录已失效，请重新选择')
+    if (!Array.isArray(request.files) || request.files.length === 0) return
+
+    for (const file of request.files) {
+      const relative = sanitizeRelativePath(file.path)
+      const target = resolve(root, relative)
+      if (target !== root && !target.startsWith(root + sep)) {
+        throw new Error(`非法导出路径: ${file.path}`)
+      }
+      await mkdir(dirname(target), { recursive: true })
+      await writeFile(target, Buffer.from(file.base64, 'base64'))
+    }
+  })
+
   ipcMain.handle(IPC.openExternal, async (_event, url: string) => {
     if (/^https?:\/\//i.test(url)) await shell.openExternal(url)
   })
@@ -112,4 +147,17 @@ export function registerIpcHandlers(): void {
 function sanitizeFilename(name: string): string {
   const base = name.replace(/[\\/:*?"<>|]/g, '_').trim()
   return base.length > 0 ? base : 'pktgf-export.png'
+}
+
+/** 相对路径只允许普通段；拒绝绝对路径、盘符和 ..。 */
+function sanitizeRelativePath(rawPath: string): string {
+  const path = String(rawPath ?? '').replace(/\\/g, '/')
+  if (!path || path.startsWith('/') || /^[a-zA-Z]:/.test(path)) {
+    throw new Error(`非法导出路径: ${rawPath}`)
+  }
+  const segments = path.split('/')
+  if (segments.some((segment) => !segment || segment === '.' || segment === '..')) {
+    throw new Error(`非法导出路径: ${rawPath}`)
+  }
+  return segments.join(sep)
 }

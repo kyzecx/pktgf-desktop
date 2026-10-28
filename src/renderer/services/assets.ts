@@ -32,6 +32,9 @@ import type { CatalogAssets, CatalogFace, CatalogItem, Part } from '@shared/cont
 
 const spec: OfficialSpec = OFFICIAL_SPEC
 
+const ZIP_CACHE_LIMIT = 64
+const COSTUME_CACHE_LIMIT = 256
+
 const zipCache = new Map<string, Promise<Uint8Array>>()
 const costumeCache = new Map<string, Promise<CostumeInstance>>()
 const faceCache = new Map<string, Promise<RgbaImage | null>>()
@@ -61,6 +64,11 @@ async function fetchBytes(url: string): Promise<Uint8Array> {
     })
 
   zipCache.set(url, promise)
+  while (zipCache.size > ZIP_CACHE_LIMIT) {
+    const oldest = zipCache.keys().next().value
+    if (oldest === undefined) break
+    zipCache.delete(oldest)
+  }
   return promise
 }
 
@@ -85,6 +93,11 @@ export function getCostume(item: CatalogItem): Promise<CostumeInstance> {
 
   promise.catch(() => costumeCache.delete(item.code))
   costumeCache.set(item.code, promise)
+  while (costumeCache.size > COSTUME_CACHE_LIMIT) {
+    const oldest = costumeCache.keys().next().value
+    if (oldest === undefined) break
+    costumeCache.delete(oldest)
+  }
   return promise
 }
 

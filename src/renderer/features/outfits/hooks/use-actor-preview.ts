@@ -54,7 +54,7 @@ export function useActorPreview(
   const smallBackCanvasRef = React.useRef<HTMLCanvasElement | null>(null)
   const smallFrontRef = React.useRef<RgbaImage | null>(null)
   const smallBackRef = React.useRef<RgbaImage | null>(null)
-  const [status, setStatus] = React.useState<'idle' | 'loading' | 'ready' | 'error'>('idle')
+  const [status, setStatus] = React.useState<'idle' | 'loading' | 'ready' | 'error'>('loading')
   const [smallReady, setSmallReady] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
 
@@ -120,11 +120,20 @@ export function useActorPreview(
     width: number
     height: number
   } | null>(null)
+  /** 只在这些输入变化时显示加载层；动画帧变化不能反复触发它。 */
+  const sceneInputsRef = React.useRef<unknown[] | null>(null)
 
   React.useEffect(() => {
     if (!catalog || !assets) return
     let cancelled = false
-    setStatus('loading')
+
+    const sceneInputs = [catalog, assets, faces, sex, worn, faceCode, custom]
+    const previousInputs = sceneInputsRef.current
+    const isNewScene =
+      !previousInputs ||
+      sceneInputs.some((value, index) => value !== previousInputs[index])
+    sceneInputsRef.current = sceneInputs
+    if (isNewScene) setStatus('loading')
 
     const face = faces.find((entry) => entry.code === faceCode) ?? null
 
@@ -148,29 +157,6 @@ export function useActorPreview(
         draw(canvasRef.current, composed, scale)
         setStatus('ready')
         setError(null)
-
-        // 小模型是附加视图：失败只隐藏它，不影响大模型预览。
-        try {
-          const [smallBase, smallFace] = await Promise.all([
-            getSmallBaseActor(assets),
-            face ? getFaceMiniImage(face) : Promise.resolve(null),
-          ])
-          const small = await composeSmallFromCatalog({
-            worn,
-            base: smallBase,
-            face: smallFace,
-            custom,
-          })
-          if (cancelled) return
-          smallFrontRef.current = small.front
-          smallBackRef.current = small.back
-          drawSmall(smallCanvasRef.current, small.front)
-          drawSmall(smallBackCanvasRef.current, small.back)
-          setSmallReady(true)
-        } catch (smallError) {
-          if (!cancelled) setSmallReady(false)
-          console.warn('[outfits] 小模型合成失败', smallError)
-        }
       } catch (caught) {
         if (cancelled) return
         setStatus('error')
@@ -182,6 +168,43 @@ export function useActorPreview(
       cancelled = true
     }
   }, [catalog, assets, faces, sex, worn, faceCode, scale, frame, custom])
+
+  // 小模型只使用静态第 0 帧，不跟大模型逐帧重绘；否则动态连身会拖着
+  // 两个小画布一起刷新，既浪费算力也容易出现画面抖动。
+  React.useEffect(() => {
+    if (!assets) return
+    let cancelled = false
+
+    const face = faces.find((entry) => entry.code === faceCode) ?? null
+
+    void (async () => {
+      try {
+        const [smallBase, smallFace] = await Promise.all([
+          getSmallBaseActor(assets),
+          face ? getFaceMiniImage(face) : Promise.resolve(null),
+        ])
+        const small = await composeSmallFromCatalog({
+          worn,
+          base: smallBase,
+          face: smallFace,
+          custom,
+        })
+        if (cancelled) return
+        smallFrontRef.current = small.front
+        smallBackRef.current = small.back
+        drawSmall(smallCanvasRef.current, small.front)
+        drawSmall(smallBackCanvasRef.current, small.back)
+        setSmallReady(true)
+      } catch (smallError) {
+        if (!cancelled) setSmallReady(false)
+        console.warn('[outfits] 小模型合成失败', smallError)
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [assets, faces, faceCode, worn, custom])
 
   const exportArrangementFrames = React.useCallback(
     async (mode: PreviewMode, count: number, targetScale: number): Promise<RgbaImage[]> => {

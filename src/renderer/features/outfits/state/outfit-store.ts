@@ -158,7 +158,7 @@ export const useOutfitStore = create<OutfitState>((set) => ({
   worn: {},
   faceCode: null,
   playing: true,
-  categoryLayout: readChoice(CATEGORY_LAYOUT_KEY, ['vertical', 'horizontal'] as const, 'vertical'),
+  categoryLayout: readChoice(CATEGORY_LAYOUT_KEY, ['vertical', 'horizontal'] as const, 'horizontal'),
   itemDisplay: readChoice(ITEM_DISPLAY_KEY, ['large', 'small'] as const, 'large'),
   previewMode: readChoice(PREVIEW_MODE_KEY, ['large', 'small', 'both'] as const, 'both'),
   itemSort: readChoice(ITEM_SORT_KEY, ['newest', 'oldest', 'name'] as const, 'newest'),

@@ -7,7 +7,7 @@ import { formatResourceTime } from '@ui/format'
 import type { UseActorPreviewResult } from '../hooks/use-actor-preview'
 import { useOutfitExport } from '../hooks/use-outfit-export'
 import { EXPORT_GIF_SHORTCUT, EXPORT_SHORTCUT } from '../shortcuts'
-import { LIST_COLUMN_OPTIONS, useOutfitStore, type ListColumns } from '../state/outfit-store'
+import { useOutfitStore } from '../state/outfit-store'
 import { Section } from './section'
 
 export const OUTFIT_VIEW_WINDOW_ID = 'outfit-view'
@@ -22,20 +22,18 @@ export function ViewSettingsWindow({
   worn: Partial<Record<Part, CatalogItem>>
   preview: UseActorPreviewResult
 }): React.ReactElement {
+  const sex = useOutfitStore((state) => state.sex)
+  const setSex = useOutfitStore((state) => state.setSex)
   const scale = useOutfitStore((state) => state.scale)
   const setScale = useOutfitStore((state) => state.setScale)
   const autoScale = useOutfitStore((state) => state.autoScale)
   const setAutoScale = useOutfitStore((state) => state.setAutoScale)
   const playing = useOutfitStore((state) => state.playing)
   const togglePlaying = useOutfitStore((state) => state.togglePlaying)
-  const itemDisplay = useOutfitStore((state) => state.itemDisplay)
-  const setItemDisplay = useOutfitStore((state) => state.setItemDisplay)
   const previewMode = useOutfitStore((state) => state.previewMode)
   const setPreviewMode = useOutfitStore((state) => state.setPreviewMode)
   const smallViews = useOutfitStore((state) => state.smallViews)
   const setSmallView = useOutfitStore((state) => state.setSmallView)
-  const listColumns = useOutfitStore((state) => state.listColumns)
-  const setListColumns = useOutfitStore((state) => state.setListColumns)
 
   const { exportingPng, exportingGif, hasMotion, exportPng, exportGif } = useOutfitExport({
     catalog,
@@ -66,38 +64,21 @@ export function ViewSettingsWindow({
       defaultPosition={{ x: 280, y: 120 }}
     >
       <div className="flex flex-col gap-2 p-2.5">
-        <Section title="列表">
+        <Section title="角色">
           <div className="flex items-center justify-between gap-3">
-            <span className="text-[11px] text-pkt-text-mute">列表显示</span>
+            <span className="text-[11px] text-pkt-text-mute">性别</span>
             <div className="flex items-center gap-1">
-              {(['large', 'small'] as const).map((value) => (
+              {([1, 2] as const).map((value) => (
                 <ButtonRoot
                   key={value}
                   size="sm"
-                  variant={itemDisplay === value ? 'primary' : 'ghost'}
-                  onPress={() => setItemDisplay(value)}
+                  variant={sex === value ? 'primary' : 'ghost'}
+                  onPress={() => setSex(value)}
                 >
-                  {value === 'large' ? '大图' : '小图'}
+                  {value === 1 ? '男' : '女'}
                 </ButtonRoot>
               ))}
             </div>
-          </div>
-
-          <SeparatorRoot className="my-2" />
-
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-[11px] text-pkt-text-mute">每行数量</span>
-            <select
-              value={listColumns}
-              onChange={(event) => setListColumns(Number(event.target.value) as ListColumns)}
-              className="h-6 rounded-md border border-pkt-border bg-pkt-panel px-1.5 text-[10px] text-pkt-text"
-            >
-              {LIST_COLUMN_OPTIONS.map((value) => (
-                <option key={value} value={value}>
-                  {value === 0 ? '自动' : `${value} 个`}
-                </option>
-              ))}
-            </select>
           </div>
         </Section>
 

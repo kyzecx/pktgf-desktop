@@ -64,7 +64,7 @@ linux:
   desktop:
     entry:
       Name: 皮卡堂工坊
-      Comment: 按官方客户端规则还原的像素搭配工具
+      Comment: 皮卡堂像素搭配与图鉴工具
 
 # 自动更新：GitHub Releases（未签名包同样适用）
 publish:

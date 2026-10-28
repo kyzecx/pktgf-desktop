@@ -6,7 +6,8 @@ import { useSaves } from '@features/saves/hooks/use-saves'
 import { applyOutfitSave, isOutfitSave, outfitItemCount } from '@features/outfits/state/outfit-save'
 import { composeActor, OFFICIAL_SPEC, type CostumeInstance } from '@engine/index'
 import { formatResourceTime, formatSlotTime } from '@ui/format'
-import { IconArrowRight, IconFolder, IconHanger, IconRefresh, IconShirt } from '@ui/icons'
+import { IconArrowRight, IconBook, IconFolder, IconHanger, IconRefresh } from '@ui/icons'
+import logo from '@/assets/pktgf-logo.png'
 import { getBaseActor, getCostume, toDataUrl } from '@/services/assets'
 import { UpdateCard } from './update-card'
 
@@ -20,15 +21,16 @@ export function LauncherPage({
   catalog,
   info,
   onOpenOutfits,
+  onOpenCatalog,
 }: {
   catalog: Catalog | null
   info: AppInfo | null
   onOpenOutfits: () => void
+  onOpenCatalog: () => void
 }): React.ReactElement {
   const { saves } = useSaves()
   const outfitSaves = React.useMemo(() => saves.filter(isOutfitSave), [saves])
 
-  const outfitCount = catalog?.items.length ?? 0
   const latest = outfitSaves[0] ?? null
   const preview = useWorkspacePreview(catalog, outfitSaves)
   const resourceTime = formatResourceTime(catalog?.meta.resourceList)
@@ -41,20 +43,30 @@ export function LauncherPage({
     <div className="pkt-scroll h-full overflow-y-auto">
       <div className="mx-auto flex max-w-[1400px] flex-col gap-4 px-6 py-5">
         <header className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-[18px] font-semibold tracking-tight text-pkt-text">工作台</h1>
-          <ButtonRoot size="sm" onPress={onOpenOutfits}>
-            打开衣柜
-            <IconArrowRight className="size-3.5" />
-          </ButtonRoot>
+          <div className="flex min-w-0 items-center gap-3">
+            <img
+              src={logo}
+              alt="皮卡堂工坊"
+              className="size-12 shrink-0 rounded-xl border border-pkt-border/70 bg-pkt-panel object-cover"
+            />
+            <div className="min-w-0">
+              <h1 className="text-[20px] font-semibold tracking-tight text-pkt-text">皮卡堂工坊</h1>
+              <p className="text-[10px] text-pkt-text-mute">工作台 · 像素搭配 / 图鉴 / 存档</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <ButtonRoot size="sm" variant="outline" onPress={onOpenCatalog}>
+              <IconBook className="size-3.5" />
+              打开图鉴
+            </ButtonRoot>
+            <ButtonRoot size="sm" onPress={onOpenOutfits}>
+              打开衣柜
+              <IconArrowRight className="size-3.5" />
+            </ButtonRoot>
+          </div>
         </header>
 
-        <div className="grid grid-cols-4 gap-3">
-          <Kpi
-            icon={<IconShirt className="size-4" />}
-            label="在线服饰"
-            value={outfitCount > 0 ? outfitCount.toLocaleString() : '载入中'}
-            hint="10 个分类 · 官方目录"
-          />
+        <div className="grid grid-cols-3 gap-3">
           <Kpi
             icon={<IconFolder className="size-4" />}
             label="已保存搭配"

@@ -5,24 +5,33 @@ import { CatalogProvider, useCatalog } from './catalog-context'
 import { useRoute, type Route } from './use-route'
 
 import { LauncherPage } from '@features/launcher/launcher-page'
+import { CatalogPage } from '@features/catalog/catalog-page'
 import { OutfitsPage } from '@features/outfits/outfits-page'
 import { SettingsPage } from '@features/settings/settings-page'
 import { SavesPage } from '@features/saves/saves-page'
 import { applyOutfitSave } from '@features/outfits/state/outfit-save'
-import { IconFolder, IconHome, IconSettings, IconShirt } from '@ui/icons'
+import { IconBook, IconFolder, IconMoon, IconSettings, IconShirt, IconSun } from '@ui/icons'
+import { useTheme } from '@ui/theme'
+import logo from '@/assets/pktgf-logo.png'
 import { AppShell, NavRail, StatusBar, TitleBar } from '@ui/layout'
 import { formatResourceTime } from '@ui/format'
 import { EmptyStateRoot, SpinnerRoot } from '@heroui/react'
 
 const NAV = [
-  { key: 'launcher' as const, label: '工作台', icon: <IconHome /> },
+  {
+    key: 'launcher' as const,
+    label: '工作台',
+    icon: <img src={logo} alt="" draggable={false} className="size-6 rounded-md object-cover" />,
+  },
   { key: 'outfits' as const, label: '搭配', icon: <IconShirt /> },
+  { key: 'catalog' as const, label: '图鉴', icon: <IconBook /> },
   { key: 'saves' as const, label: '存档', icon: <IconFolder /> },
 ]
 
 const ROUTE_TITLE: Record<Route, string> = {
   launcher: '皮卡堂工坊',
   outfits: '搭配 · 在线衣柜',
+  catalog: '图鉴',
   saves: '存档管理',
   settings: '设置',
 }
@@ -37,6 +46,7 @@ export function App(): React.ReactElement {
 
 function AppFrame(): React.ReactElement {
   const [route, navigate] = useRoute()
+  const [theme, toggleTheme] = useTheme()
   const { catalog, meta, assets, version, error } = useCatalog()
   const [info, setInfo] = React.useState<AppInfo | null>(null)
 
@@ -46,6 +56,12 @@ function AppFrame(): React.ReactElement {
 
   const navItems = NAV.map((entry) => ({ ...entry, active: route === entry.key }))
   const bottomNavItems = [
+    {
+      key: 'theme',
+      label: theme === 'dark' ? '浅色' : '深色',
+      icon: theme === 'dark' ? <IconSun /> : <IconMoon />,
+      active: false,
+    },
     {
       key: 'settings' as const,
       label: '设置',
@@ -70,7 +86,10 @@ function AppFrame(): React.ReactElement {
           items={navItems}
           bottomItems={bottomNavItems}
           active={route}
-          onSelect={(key) => navigate(key as Route)}
+          onSelect={(key) => {
+            if (key === 'theme') toggleTheme()
+            else navigate(key as Route)
+          }}
         />
       }
       statusBar={
@@ -79,7 +98,11 @@ function AppFrame(): React.ReactElement {
           right={
             <>
               <span>v{info?.appVersion ?? '0.0.0'}</span>
-              <span>{catalog ? `${catalog.items.length.toLocaleString()} 件服饰` : '加载中'}</span>
+              {route !== 'launcher' ? (
+                <span>
+                  {catalog ? `${catalog.items.length.toLocaleString()} 件服饰` : '加载中'}
+                </span>
+              ) : null}
             </>
           }
         />
@@ -120,7 +143,14 @@ function RouteView({
 }): React.ReactElement {
   if (route === 'settings') return <SettingsPage info={info} version={version} />
   if (route === 'launcher') {
-    return <LauncherPage catalog={catalog} info={info} onOpenOutfits={() => navigate('outfits')} />
+    return (
+      <LauncherPage
+        catalog={catalog}
+        info={info}
+        onOpenOutfits={() => navigate('outfits')}
+        onOpenCatalog={() => navigate('catalog')}
+      />
+    )
   }
   if (route === 'saves') {
     return (
@@ -153,6 +183,8 @@ function RouteView({
       </div>
     )
   }
+
+  if (route === 'catalog') return <CatalogPage catalog={catalog} assets={assets} />
 
   return <OutfitsPage catalog={catalog} assets={assets} faces={faces} />
 }

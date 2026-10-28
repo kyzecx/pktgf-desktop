@@ -1,8 +1,21 @@
 import * as React from 'react'
 
 import type { Catalog, CatalogAssets, CatalogItem, Part, SaveRecord } from '@shared/contract'
-import { ButtonRoot, ChipLabel, ChipRoot, IconSearch, InputRoot } from '@heroui/react'
+import { ButtonRoot } from '@heroui/react'
 import { useFloatingStore } from '@ui/floating'
+import {
+  SearchField,
+  ToolbarActions,
+  ToolbarCount,
+  ToolbarRoot,
+  ToolbarSearch,
+  ToolbarSubbar,
+} from '@ui/toolbar'
+import { IconLayoutHorizontal, IconLayoutVertical } from '@ui/icons'
+import { ListSettingsButton, ListSettingsWindow } from '@features/shared/list-settings'
+import { useSearchShortcut } from '@ui/shortcuts'
+import { useRecentItems } from '@ui/recent-items'
+import { getCostume, toDataUrl } from '@/services/assets'
 import { FacesWindow, OUTFIT_FACES_WINDOW_ID } from './components/faces-window'
 import { ItemGrid } from './components/item-grid'
 import {
@@ -10,9 +23,9 @@ import {
   OutfitDetailWindow,
   type WornCustomAsset,
 } from './components/outfit-detail-window'
-import { SearchPalette } from './components/search-palette'
 import { OUTFIT_SLOTS_WINDOW_ID, SlotsWindow } from './components/slots-window'
 import { OUTFIT_VIEW_WINDOW_ID, ViewSettingsWindow } from './components/view-settings-window'
+import { CategoryTabs } from './components/category-tabs'
 import { WardrobePanel, type OutfitPanel } from './components/wardrobe-panel'
 import { useActorPreview } from './hooks/use-actor-preview'
 import { usePartIcons } from './hooks/use-part-icons'
@@ -34,14 +47,18 @@ export function OutfitsPage({
   const sex = useOutfitStore((state) => state.sex)
   const part = useOutfitStore((state) => state.part)
   const search = useOutfitStore((state) => state.search)
+  const [allSearch, setAllSearch] = React.useState(true)
   const worn = useOutfitStore((state) => state.worn)
   const categoryLayout = useOutfitStore((state) => state.categoryLayout)
   const toggleCategoryLayout = useOutfitStore((state) => state.toggleCategoryLayout)
   const itemDisplay = useOutfitStore((state) => state.itemDisplay)
   const listColumns = useOutfitStore((state) => state.listColumns)
   const itemSort = useOutfitStore((state) => state.itemSort)
-  const setItemSort = useOutfitStore((state) => state.setItemSort)
   const store = useOutfitStore()
+  const searchRef = React.useRef<HTMLInputElement | null>(null)
+  const recent = useRecentItems('outfit')
+
+  useSearchShortcut(() => searchRef.current?.focus())
 
   const customAssets = useCustomStore((state) => state.assets)
   const icons = usePartIcons(assets.uiIcons)
@@ -72,16 +89,25 @@ export function OutfitsPage({
 
   const items = React.useMemo(() => {
     const keyword = search.trim().toLowerCase()
+    const searchAll = allSearch && keyword.length > 0
     const filtered = catalog.items.filter((item) => {
-      if (item.part !== part) return false
+      if (!searchAll && item.part !== part) return false
       if (item.sex !== 0 && item.sex !== sex) return false
       if (!keyword) return true
       return item.name.toLowerCase().includes(keyword) || item.code.toLowerCase().includes(keyword)
     })
     return filtered.sort((a, b) => compareItems(a, b, itemSort))
-  }, [catalog.items, part, sex, search, itemSort])
+  }, [allSearch, catalog.items, part, sex, search, itemSort])
 
-  const selectedCode = worn[part]?.code ?? null
+  const wornCodes = React.useMemo(
+    () =>
+      new Set(
+        Object.values(worn)
+          .map((item) => item?.code)
+          .filter((code): code is string => Boolean(code)),
+      ),
+    [worn],
+  )
 
   const onToggleCustom = (asset: CustomAsset): void => {
     setCustomWorn((current) =>
@@ -105,99 +131,147 @@ export function OutfitsPage({
     applyOutfitSave(catalog, save)
   }
 
+  const rememberWorn = (item: CatalogItem): void => {
+    void getCostume(item)
+      .then((art) => {
+        const image = art.frontHead ?? art.body ?? art.backHead ?? art.frames[0] ?? art.wingMask
+        if (image) {
+          recent.remember({
+            key: item.code,
+            label: item.name,
+            image: toDataUrl(image),
+            value: item.code,
+          })
+        }
+      })
+      .catch(() => undefined)
+  }
+
+  const toggleItem = (item: CatalogItem): void => {
+    const willWear = worn[item.part]?.code !== item.code
+    store.toggle(item)
+    if (willWear) {
+      store.setPart(item.part)
+      rememberWorn(item)
+    }
+  }
+
+  const pickHistory = (value: string): void => {
+    const item = catalog.items.find((entry) => entry.code === value)
+    if (!item) return
+    store.setPart(item.part)
+    if (worn[item.part]?.code !== item.code) store.toggle(item)
+  }
+
+  const isVertical = categoryLayout === 'vertical'
+
   return (
-    <div className="flex h-full min-h-0">
-      <section className="flex min-w-0 flex-1 flex-col">
-        <div className="flex h-11 shrink-0 items-center gap-2 border-b border-pkt-border px-3">
-          <div className="relative w-64">
-            <IconSearch className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-pkt-text-mute" />
-            <InputRoot
-              value={search}
-              placeholder={`搜索${PART_LABELS[part]}`}
-              onChange={(event) => store.setSearch(event.target.value)}
-              className="w-full pl-9"
+    <div className="flex h-full min-h-0 flex-col">
+      <ToolbarRoot>
+        <ToolbarSearch>
+          <SearchField
+            value={search}
+            placeholder={allSearch ? '搜索全部服饰' : `搜索${PART_LABELS[part]}`}
+            inputRef={searchRef}
+            scope={{ active: allSearch, onToggle: () => setAllSearch((value) => !value) }}
+            history={recent.items}
+            onPickHistory={(item) => pickHistory(item.value)}
+            onClearHistory={recent.clear}
+            onChange={store.setSearch}
+          />
+        </ToolbarSearch>
+        <ToolbarCount>{items.length.toLocaleString()} 件</ToolbarCount>
+        <ToolbarActions>
+          <ListSettingsButton />
+        </ToolbarActions>
+      </ToolbarRoot>
+
+      <ToolbarSubbar>
+        {isVertical ? (
+          <span className="text-[10px] text-pkt-text-mute">分类已移到左侧</span>
+        ) : (
+          <div className="min-w-0 flex-1">
+            <CategoryTabs
+              counts={counts}
+              active={part}
+              icons={icons}
+              orientation="horizontal"
+              onSelect={(next) => store.setPart(next)}
             />
           </div>
-          <ChipRoot size="sm" variant="soft">
-            <ChipLabel>{items.length.toLocaleString()} 件</ChipLabel>
-          </ChipRoot>
-          <select
-            value={itemSort}
-            onChange={(event) => setItemSort(event.target.value as ItemSort)}
-            aria-label="列表排序"
-            className="h-7 shrink-0 rounded-md border border-pkt-border bg-pkt-panel px-1.5 text-[10px] text-pkt-text"
+        )}
+        <ToolbarActions>
+          <ButtonRoot
+            size="sm"
+            variant="ghost"
+            isIconOnly
+            aria-label={isVertical ? '分类改为横排' : '分类改为竖排'}
+            onPress={toggleCategoryLayout}
           >
-            <option value="newest">最新优先</option>
-            <option value="oldest">最早优先</option>
-            <option value="name">按名称</option>
-          </select>
-          <div className="ml-auto flex items-center gap-1">
-            {([1, 2] as const).map((value) => (
-              <ButtonRoot
-                key={value}
-                size="sm"
-                variant={sex === value ? 'primary' : 'ghost'}
-                onClick={() => store.setSex(value)}
-              >
-                {value === 1 ? '男' : '女'}
-              </ButtonRoot>
-            ))}
+            {isVertical ? (
+              <IconLayoutHorizontal className="size-4" />
+            ) : (
+              <IconLayoutVertical className="size-4" />
+            )}
+          </ButtonRoot>
+        </ToolbarActions>
+      </ToolbarSubbar>
+
+      <div className="flex min-h-0 flex-1">
+        {isVertical ? (
+          <div className="flex w-14 shrink-0 flex-col border-r border-pkt-border/70">
+            <CategoryTabs
+              counts={counts}
+              active={part}
+              icons={icons}
+              orientation="vertical"
+              onSelect={(next) => store.setPart(next)}
+            />
           </div>
-        </div>
-        <div className="min-h-0 flex-1 p-3">
-          <ItemGrid
-            items={items}
-            selectedCode={selectedCode}
-            display={itemDisplay}
-            columnsSetting={listColumns}
-            onSelect={(item) => store.toggle(item)}
-          />
-        </div>
-      </section>
+        ) : null}
 
-      <WardrobePanel
-        preview={preview}
-        wornCount={Object.keys(worn).length}
-        openPanels={{ detail: detailOpen, faces: facesOpen, slots: slotsOpen, view: viewOpen }}
-        onTogglePanel={(panel: OutfitPanel) => togglePanel(panelId(panel))}
-        counts={counts}
-        activePart={part}
-        icons={icons}
-        onSelectPart={(next) => store.setPart(next)}
-        layout={categoryLayout}
-        onToggleLayout={toggleCategoryLayout}
-      />
+        <section className="flex min-w-0 flex-1 flex-col">
+          <div className="min-h-0 flex-1 p-3">
+            <ItemGrid
+              items={items}
+              selectedCodes={wornCodes}
+              display={itemDisplay}
+              columnsSetting={listColumns}
+              onSelect={toggleItem}
+            />
+          </div>
+        </section>
 
-      <OutfitDetailWindow
-        worn={worn}
-        customAssets={customAssets}
-        customWorn={customWorn}
-        onToggleCustom={onToggleCustom}
-        onUnequip={(target) => store.unequip(target)}
-        onClear={() => store.clear()}
-      />
+        <WardrobePanel
+          preview={preview}
+          wornCount={Object.keys(worn).length}
+          openPanels={{ detail: detailOpen, faces: facesOpen, slots: slotsOpen, view: viewOpen }}
+          onTogglePanel={(panel: OutfitPanel) => togglePanel(panelId(panel))}
+        />
 
-      <FacesWindow assets={assets} faces={catalog.faces} />
+        <OutfitDetailWindow
+          worn={worn}
+          customAssets={customAssets}
+          customWorn={customWorn}
+          onToggleCustom={onToggleCustom}
+          onUnequip={(target) => store.unequip(target)}
+          onClear={() => store.clear()}
+        />
 
-      <SlotsWindow
-        preview={preview}
-        slots={outfitSaves}
-        onSaveSlot={putSave}
-        onDeleteSlot={removeSave}
-        onLoadSlot={onLoadSlot}
-      />
+        <FacesWindow assets={assets} faces={catalog.faces} />
 
-      <ViewSettingsWindow catalog={catalog} worn={worn} preview={preview} />
+        <SlotsWindow
+          preview={preview}
+          slots={outfitSaves}
+          onSaveSlot={putSave}
+          onDeleteSlot={removeSave}
+          onLoadSlot={onLoadSlot}
+        />
 
-      <SearchPalette
-        items={catalog.items}
-        sex={sex}
-        worn={worn}
-        onPick={(item) => {
-          store.setPart(item.part)
-          store.toggle(item)
-        }}
-      />
+        <ViewSettingsWindow catalog={catalog} worn={worn} preview={preview} />
+
+        <ListSettingsWindow />
+      </div>
     </div>
   )
 }

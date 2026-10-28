@@ -30,10 +30,20 @@
   --pkt-accent-text: var(--accent-foreground);
   --pkt-danger: var(--danger);
   --pkt-warn: var(--warning);
-  --pkt-shadow: rgba(0, 0, 0, 0.5);
+  --pkt-shadow: rgba(0, 0, 0, 0.14);
+  --pkt-shadow-lg: 0 24px 60px -16px rgba(0, 0, 0, 0.25);
+  --pkt-backdrop: rgba(0, 0, 0, 0.35);
+  --pkt-glow: rgba(0, 0, 0, 0.035);
   --pkt-radius: var(--radius);
   --pkt-titlebar-h: 40px;
   --pkt-statusbar-h: 26px;
+}
+
+[data-theme='dark'] {
+  --pkt-shadow: rgba(0, 0, 0, 0.5);
+  --pkt-shadow-lg: 0 24px 60px -16px rgba(0, 0, 0, 0.75);
+  --pkt-backdrop: rgba(0, 0, 0, 0.55);
+  --pkt-glow: rgba(255, 255, 255, 0.06);
 }
 
 @theme inline {
@@ -133,12 +143,32 @@ body {
 /* 棋盘格底色：预览底板与空态占位共用 */
 .pkt-checker {
   background-image:
-    linear-gradient(45deg, color-mix(in oklab, var(--foreground) 6%, transparent) 25%, transparent 25%),
-    linear-gradient(-45deg, color-mix(in oklab, var(--foreground) 6%, transparent) 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, color-mix(in oklab, var(--foreground) 6%, transparent) 75%),
-    linear-gradient(-45deg, transparent 75%, color-mix(in oklab, var(--foreground) 6%, transparent) 75%);
+    linear-gradient(
+      45deg,
+      color-mix(in oklab, var(--foreground) 6%, transparent) 25%,
+      transparent 25%
+    ),
+    linear-gradient(
+      -45deg,
+      color-mix(in oklab, var(--foreground) 6%, transparent) 25%,
+      transparent 25%
+    ),
+    linear-gradient(
+      45deg,
+      transparent 75%,
+      color-mix(in oklab, var(--foreground) 6%, transparent) 75%
+    ),
+    linear-gradient(
+      -45deg,
+      transparent 75%,
+      color-mix(in oklab, var(--foreground) 6%, transparent) 75%
+    );
   background-size: 12px 12px;
-  background-position: 0 0, 0 6px, 6px -6px, -6px 0;
+  background-position:
+    0 0,
+    0 6px,
+    6px -6px,
+    -6px 0;
 }
 
 /* 启动页/空态的点阵底纹：比棋盘格更轻，不抢角色预览 */

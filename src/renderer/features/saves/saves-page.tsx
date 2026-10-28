@@ -1,4 +1,4 @@
-import { ButtonRoot, IconSearch, InputRoot } from '@heroui/react'
+import { ButtonRoot } from '@heroui/react'
 import * as React from 'react'
 
 import type { SaveKind, SaveRecord } from '@shared/contract'
@@ -6,6 +6,17 @@ import { parseSaveBundle, serializeSaveBundle } from '@shared/saves'
 import { outfitItemCount } from '@features/outfits/state/outfit-save'
 import { formatSlotTime } from '@ui/format'
 import { IconArrowRight, IconHanger } from '@ui/icons'
+import { useSearchShortcut } from '@ui/shortcuts'
+import { useRecentItems } from '@ui/recent-items'
+import {
+  SearchField,
+  ToolbarActions,
+  ToolbarCount,
+  ToolbarGroup,
+  ToolbarRoot,
+  ToolbarSearch,
+  ToolbarSelect,
+} from '@ui/toolbar'
 import { toBase64 } from '@/services/assets'
 import { useSaves } from './hooks/use-saves'
 
@@ -16,6 +27,12 @@ const KIND_LABELS: Record<SaveKind, string> = {
 
 type SortOrder = 'newest' | 'oldest' | 'name'
 type KindFilter = 'all' | SaveKind
+
+const SORT_OPTIONS = [
+  { value: 'newest', label: '最新优先' },
+  { value: 'oldest', label: '最早优先' },
+  { value: 'name', label: '按名称' },
+]
 
 /**
  * 存档管理页。
@@ -35,6 +52,10 @@ export function SavesPage({
   const [kind, setKind] = React.useState<KindFilter>('all')
   const [sort, setSort] = React.useState<SortOrder>('newest')
   const [notice, setNotice] = React.useState<string | null>(null)
+  const searchRef = React.useRef<HTMLInputElement | null>(null)
+  const recent = useRecentItems('saves')
+
+  useSearchShortcut(() => searchRef.current?.focus())
 
   const kinds = React.useMemo(() => {
     const present = new Set(saves.map((save) => save.kind))
@@ -84,108 +105,111 @@ export function SavesPage({
     })
   }
 
+  const openSave = (save: SaveRecord): void => {
+    recent.remember({
+      key: save.id,
+      label: save.name,
+      image: save.preview,
+      value: save.id,
+    })
+    onOpenSave(save)
+  }
+
+  const pickHistory = (value: string): void => {
+    const save = saves.find((entry) => entry.id === value)
+    if (save) openSave(save)
+  }
+
   return (
-    <div className="pkt-scroll h-full overflow-y-auto">
-      <div className="mx-auto flex max-w-[1400px] flex-col gap-4 px-6 py-5">
-        <header className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="text-[18px] font-semibold tracking-tight text-pkt-text">存档管理</h1>
-            <p className="mt-0.5 text-[11px] text-pkt-text-mute">
-              搭配、装修等工具的存档都汇总在这里
+    <div className="flex h-full min-h-0 flex-col">
+      <ToolbarRoot>
+        <ToolbarSearch>
+          <SearchField
+            value={query}
+            placeholder="搜索存档名称"
+            inputRef={searchRef}
+            history={recent.items}
+            onPickHistory={(item) => pickHistory(item.value)}
+            onClearHistory={recent.clear}
+            onChange={setQuery}
+          />
+        </ToolbarSearch>
+        <ToolbarCount>
+          {visible.length} / {saves.length} 个存档
+        </ToolbarCount>
+        {kinds.length > 1 ? (
+          <ToolbarGroup>
+            {kinds.map((value) => (
+              <ButtonRoot
+                key={value}
+                size="sm"
+                variant={kind === value ? 'primary' : 'ghost'}
+                onPress={() => setKind(value)}
+              >
+                {value === 'all' ? '全部' : KIND_LABELS[value]}
+              </ButtonRoot>
+            ))}
+          </ToolbarGroup>
+        ) : null}
+        <ToolbarActions>
+          <ToolbarSelect
+            value={sort}
+            options={SORT_OPTIONS}
+            ariaLabel="存档排序"
+            onChange={(value) => setSort(value as SortOrder)}
+          />
+          <ButtonRoot size="sm" variant="outline" onPress={() => void importSaves()}>
+            导入
+          </ButtonRoot>
+          <ButtonRoot
+            size="sm"
+            variant="outline"
+            isDisabled={saves.length === 0}
+            onPress={() => void exportSaves()}
+          >
+            导出全部
+          </ButtonRoot>
+          <ButtonRoot size="sm" onPress={onOpenOutfits}>
+            打开搭配
+            <IconArrowRight className="size-3.5" />
+          </ButtonRoot>
+        </ToolbarActions>
+      </ToolbarRoot>
+
+      <div className="pkt-scroll min-h-0 flex-1 overflow-y-auto">
+        <div className="mx-auto flex max-w-[1400px] flex-col gap-4 px-6 py-5">
+          {notice ? (
+            <p className="rounded-pkt border border-pkt-border/70 bg-surface/40 px-3 py-2 text-[10px] text-pkt-text-mute">
+              {notice}
+              <button
+                type="button"
+                onClick={() => setNotice(null)}
+                className="ml-2 text-pkt-accent hover:underline"
+              >
+                知道了
+              </button>
             </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <ButtonRoot size="sm" variant="outline" onPress={() => void importSaves()}>
-              导入
-            </ButtonRoot>
-            <ButtonRoot
-              size="sm"
-              variant="outline"
-              isDisabled={saves.length === 0}
-              onPress={() => void exportSaves()}
-            >
-              导出全部
-            </ButtonRoot>
-            <ButtonRoot size="sm" onPress={onOpenOutfits}>
-              打开搭配
-              <IconArrowRight className="size-3.5" />
-            </ButtonRoot>
-          </div>
-        </header>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative w-64">
-            <IconSearch className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-pkt-text-mute" />
-            <InputRoot
-              value={query}
-              placeholder="搜索存档名称"
-              onChange={(event) => setQuery(event.target.value)}
-              className="w-full pl-9"
-            />
-          </div>
-
-          {kinds.length > 1 ? (
-            <div className="flex items-center gap-1">
-              {kinds.map((value) => (
-                <ButtonRoot
-                  key={value}
-                  size="sm"
-                  variant={kind === value ? 'primary' : 'ghost'}
-                  onPress={() => setKind(value)}
-                >
-                  {value === 'all' ? '全部' : KIND_LABELS[value]}
-                </ButtonRoot>
-              ))}
-            </div>
           ) : null}
 
-          <select
-            value={sort}
-            onChange={(event) => setSort(event.target.value as SortOrder)}
-            aria-label="存档排序"
-            className="h-7 shrink-0 rounded-md border border-pkt-border bg-pkt-panel px-1.5 text-[10px] text-pkt-text"
-          >
-            <option value="newest">最新优先</option>
-            <option value="oldest">最早优先</option>
-            <option value="name">按名称</option>
-          </select>
-
-          <span className="ml-auto text-[10px] text-pkt-text-mute">
-            {visible.length} / {saves.length} 个存档
-          </span>
+          {saves.length === 0 ? (
+            <EmptySaves onStart={onOpenOutfits} />
+          ) : visible.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-pkt-border px-6 py-14 text-center text-[12px] text-pkt-text-mute">
+              没有匹配的存档
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-4">
+              {visible.map((save) => (
+                <SaveCard
+                  key={save.id}
+                  save={save}
+                  onOpen={() => openSave(save)}
+                  onDelete={() => void remove(save.id)}
+                />
+              ))}
+            </div>
+          )}
         </div>
-
-        {notice ? (
-          <p className="rounded-pkt border border-pkt-border/70 bg-surface/40 px-3 py-2 text-[10px] text-pkt-text-mute">
-            {notice}
-            <button
-              type="button"
-              onClick={() => setNotice(null)}
-              className="ml-2 text-pkt-accent hover:underline"
-            >
-              知道了
-            </button>
-          </p>
-        ) : null}
-
-        {saves.length === 0 ? (
-          <EmptySaves onStart={onOpenOutfits} />
-        ) : visible.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-pkt-border px-6 py-14 text-center text-[12px] text-pkt-text-mute">
-            没有匹配的存档
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-4">
-            {visible.map((save) => (
-              <SaveCard
-                key={save.id}
-                save={save}
-                onOpen={() => onOpenSave(save)}
-                onDelete={() => void remove(save.id)}
-              />
-            ))}
-          </div>
-        )}
       </div>
     </div>
   )

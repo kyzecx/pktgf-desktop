@@ -16,6 +16,7 @@ import * as React from 'react'
 import type { CatalogItem, OutfitSaveData, SaveRecord } from '@shared/contract'
 import { parseSaveBundle, serializeSaveBundle } from '@shared/saves'
 import { FloatingWindow, useFloatingStore } from '@ui/floating'
+import { useSaveShortcut } from '@ui/shortcuts'
 import { toBase64 } from '@/services/assets'
 import type { UseActorPreviewResult } from '../hooks/use-actor-preview'
 import { SAVE_SHORTCUT } from '../shortcuts'
@@ -53,20 +54,10 @@ export function SlotsWindow({
     [worn],
   )
 
-  React.useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent): void => {
-      if (event.repeat || event.altKey) return
-      if (!event.metaKey && !event.ctrlKey) return
-      if (event.key.toLowerCase() !== 's') return
-
-      event.preventDefault()
-      openWindow(OUTFIT_SLOTS_WINDOW_ID)
-      if (wornItems.length > 0) setSaveOpen(true)
-    }
-
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [openWindow, wornItems.length])
+  useSaveShortcut(() => {
+    openWindow(OUTFIT_SLOTS_WINDOW_ID)
+    if (wornItems.length > 0) setSaveOpen(true)
+  })
 
   const onSave = async (): Promise<void> => {
     if (saving) return

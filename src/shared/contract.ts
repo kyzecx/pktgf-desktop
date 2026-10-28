@@ -27,6 +27,34 @@ export interface CatalogFace {
   md5: string
 }
 
+/** 家具图鉴条目；图片按需从 zip 里的 symbol 读取。 */
+export interface CatalogFurniture {
+  code: string
+  type: number
+  name: string
+  description: string
+  category: string
+  zip: string
+  md5: string
+  gridW: number
+  gridH: number
+  direction: number
+}
+
+/** 宠物图鉴条目；宠物本体和宠物蛋是两个资源包。 */
+export interface CatalogPet {
+  code: string
+  type: number
+  name: string
+  eggCode: string
+  petZip: string
+  petMd5: string
+  eggZip: string
+  eggMd5: string
+  gridW: number
+  gridH: number
+}
+
 export interface CatalogMeta {
   mainScript: string
   resourceList: string
@@ -54,6 +82,8 @@ export interface Catalog {
   faces: CatalogFace[]
   motions: Record<string, Array<{ frame: number; duration: number }>>
   items: CatalogItem[]
+  furniture: CatalogFurniture[]
+  pets: CatalogPet[]
 }
 
 /** 渲染进程拿到的目录是「原始 JSON 字符串 + 解析好的元信息」，避免重复序列化。 */
@@ -123,6 +153,24 @@ export interface SaveFileResult {
   path: string | null
 }
 
+/** 图鉴批量导出：目录在 dialogs 选择一次，后续按 token 写入。 */
+export interface ChooseDirectoryResult {
+  token: string
+  path: string
+}
+
+export interface ExportFile {
+  /** 相对导出根目录的路径，不能包含 .. 或绝对路径。 */
+  path: string
+  /** PNG / JSON 的 base64 内容。 */
+  base64: string
+}
+
+export interface ExportFilesRequest {
+  token: string
+  files: ExportFile[]
+}
+
 /** Electron 的 process.platform 取值；不引 @types/node，保持 shared 层零依赖。 */
 export type Platform = 'darwin' | 'win32' | 'linux' | (string & {})
 
@@ -176,6 +224,8 @@ export interface DesktopApi {
   onAppUpdateProgress(callback: (progress: AppUpdateProgress) => void): () => void
   saveFile(request: SaveFileRequest): Promise<SaveFileResult>
   openFile(request?: OpenFileRequest): Promise<OpenFileResult | null>
+  chooseDirectory(): Promise<ChooseDirectoryResult | null>
+  writeExportFiles(request: ExportFilesRequest): Promise<void>
   openExternal(url: string): Promise<void>
   openDataDir(): Promise<void>
   windowMinimize(): void
@@ -198,6 +248,8 @@ export const IPC = {
   updateProgress: 'pkt:update-progress',
   saveFile: 'pkt:save-file',
   openFile: 'pkt:open-file',
+  chooseDirectory: 'pkt:choose-directory',
+  writeExportFiles: 'pkt:write-export-files',
   openExternal: 'pkt:open-external',
   openDataDir: 'pkt:open-data-dir',
   windowMinimize: 'pkt:window-minimize',

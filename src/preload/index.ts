@@ -7,7 +7,9 @@ import type {
   AppUpdateProgress,
   CatalogPayload,
   CacheStats,
+  ChooseDirectoryResult,
   DesktopApi,
+  ExportFilesRequest,
   ResourceVersionStatus,
   OpenFileRequest,
   OpenFileResult,
@@ -48,6 +50,10 @@ const api: DesktopApi = {
     ipcRenderer.invoke(IPC.saveFile, request),
   openFile: (request?: OpenFileRequest): Promise<OpenFileResult | null> =>
     ipcRenderer.invoke(IPC.openFile, request),
+  chooseDirectory: (): Promise<ChooseDirectoryResult | null> =>
+    ipcRenderer.invoke(IPC.chooseDirectory),
+  writeExportFiles: (request: ExportFilesRequest): Promise<void> =>
+    ipcRenderer.invoke(IPC.writeExportFiles, request),
   openExternal: (url: string): Promise<void> => ipcRenderer.invoke(IPC.openExternal, url),
   openDataDir: (): Promise<void> => ipcRenderer.invoke(IPC.openDataDir),
 
