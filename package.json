@@ -1,0 +1,70 @@
+{
+  "name": "pktgf-desktop",
+  "productName": "皮卡堂工坊",
+  "version": "0.1.0",
+  "private": true,
+  "description": "皮卡堂工坊桌面端 — 高保真像素搭配工具",
+  "license": "MIT",
+  "main": "./out/main/index.js",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "electron-vite dev",
+    "dev:web": "vite --config vite.web.config.ts",
+    "build": "npm run typecheck && electron-vite build",
+    "preview": "electron-vite preview",
+    "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "catalog:build": "tsx tools/build-catalog.ts",
+    "dist:mac": "electron-vite build && electron-builder --mac",
+    "dist:win": "electron-vite build && electron-builder --win",
+    "dist:linux": "electron-vite build && electron-builder --linux",
+    "dist": "electron-vite build && electron-builder",
+    "postinstall": "node scripts/ensure-electron.mjs"
+  },
+  "dependencies": {
+    "@heroui/react": "^3.2.6",
+    "@heroui/styles": "^3.2.6",
+    "fflate": "^0.8.2",
+    "gifenc": "^1.0.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@tailwindcss/vite": "^4.1.16",
+    "@types/node": "^22.18.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^5.0.4",
+    "electron": "^45.1.0",
+    "electron-builder": "^26.0.12",
+    "electron-vite": "^6.0.0",
+    "eslint": "^9.38.0",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "prettier": "^3.6.2",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "tailwindcss": "^4.1.16",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.0",
+    "vite": "^7.1.12",
+    "vitest": "^3.2.4",
+    "zustand": "^5.0.8"
+  },
+  "author": {
+    "name": "kyzecx",
+    "email": "1191467250@qq.com",
+    "url": "https://pktgf.top"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kyzecx/pktgf-desktop.git"
+  },
+  "desktopName": "pktgf-desktop"
+}

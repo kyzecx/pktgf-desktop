@@ -1,0 +1,110 @@
+{
+  "actor": {
+    "frameWidth": 100,
+    "frameHeight": 150,
+    "smallWidth": 40,
+    "smallHeight": 60
+  },
+  "layerOrder": [
+    "backHead",
+    "wing",
+    "body",
+    "lowerbody",
+    "head",
+    "face",
+    "pant",
+    "clot",
+    "coat",
+    "bear",
+    "glas",
+    "cset",
+    "frontHead",
+    "mask",
+    "hat",
+    "wingMask"
+  ],
+  "crops": {
+    "frontHead": {
+      "x": 600,
+      "y": 0,
+      "w": 100,
+      "h": 150
+    },
+    "backHead": {
+      "x": 600,
+      "y": 150,
+      "w": 100,
+      "h": 150
+    },
+    "body": {
+      "x": 600,
+      "y": 300,
+      "w": 100,
+      "h": 150
+    },
+    "wingMask": {
+      "x": 600,
+      "y": 450,
+      "w": 100,
+      "h": 150
+    }
+  },
+  "baseCrops": {
+    "boyHead": {
+      "x": 600,
+      "y": 0,
+      "w": 100,
+      "h": 150
+    },
+    "girlHead": {
+      "x": 600,
+      "y": 300,
+      "w": 100,
+      "h": 150
+    }
+  },
+  "animated": {
+    "frameWidth": 100,
+    "frameHeight": 150,
+    "maxFrames": 8
+  },
+  "parts": {
+    "hair": {
+      "frontHead": true,
+      "backHead": true
+    },
+    "cset": {
+      "body": true
+    },
+    "hats": {
+      "frontHead": true
+    },
+    "mask": {
+      "frontHead": true
+    },
+    "glas": {
+      "frontHead": true
+    },
+    "clot": {
+      "body": true
+    },
+    "pant": {
+      "body": true
+    },
+    "coat": {
+      "body": true
+    },
+    "bear": {
+      "frontHead": true
+    },
+    "wing": {
+      "body": true,
+      "wingMask": true
+    }
+  },
+  "whiteKeyBodyParts": [
+    "clot",
+    "coat",
+    "cset"
+  ]
+}

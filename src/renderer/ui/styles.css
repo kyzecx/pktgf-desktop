@@ -1,0 +1,152 @@
+@import 'tailwindcss';
+@import '@heroui/styles';
+
+/*
+ * 统一 UI 层的设计 token。
+ *
+ * 组件来自 HeroUI v3（React Aria + Tailwind v4），这里做两件事：
+ *   1. 定义皮卡堂工坊自己的像素风调色板
+ *   2. 把 HeroUI 的语义变量映射到这套调色板上，
+ *      这样库组件的观感与应用外壳完全一致，不需要逐个覆盖样式
+ */
+/*
+ * 反向适配：HeroUI 用自己默认的主题变量，
+ * 项目外壳（标题栏/导航/画布底板）反过来从 HeroUI 取值，
+ * 保证"库组件是 HeroUI 原生外观，外壳与它同色系"。
+ */
+:root {
+  --pkt-bg: var(--background);
+  --pkt-bg-elev: var(--surface-secondary);
+  --pkt-panel: var(--surface);
+  --pkt-panel-hover: var(--surface-hover);
+  --pkt-panel-active: var(--surface-tertiary);
+  --pkt-border: var(--border);
+  --pkt-border-strong: var(--border-secondary);
+  --pkt-text: var(--foreground);
+  --pkt-text-dim: color-mix(in oklab, var(--foreground) 78%, transparent);
+  --pkt-text-mute: var(--muted);
+  --pkt-accent: var(--accent);
+  --pkt-accent-dim: var(--accent-soft);
+  --pkt-accent-text: var(--accent-foreground);
+  --pkt-danger: var(--danger);
+  --pkt-warn: var(--warning);
+  --pkt-shadow: rgba(0, 0, 0, 0.5);
+  --pkt-radius: var(--radius);
+  --pkt-titlebar-h: 40px;
+  --pkt-statusbar-h: 26px;
+}
+
+@theme inline {
+  --color-pkt-bg: var(--pkt-bg);
+  --color-pkt-bg-elev: var(--pkt-bg-elev);
+  --color-pkt-panel: var(--pkt-panel);
+  --color-pkt-panel-hover: var(--pkt-panel-hover);
+  --color-pkt-panel-active: var(--pkt-panel-active);
+  --color-pkt-border: var(--pkt-border);
+  --color-pkt-border-strong: var(--pkt-border-strong);
+  --color-pkt-text: var(--pkt-text);
+  --color-pkt-text-dim: var(--pkt-text-dim);
+  --color-pkt-text-mute: var(--pkt-text-mute);
+  --color-pkt-accent: var(--pkt-accent);
+  --color-pkt-accent-dim: var(--pkt-accent-dim);
+  --color-pkt-accent-text: var(--pkt-accent-text);
+  --color-pkt-danger: var(--pkt-danger);
+  --color-pkt-warn: var(--pkt-warn);
+  --radius-pkt: var(--pkt-radius);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* 像素画布必须最近邻放大 */
+.pkt-pixelated {
+  image-rendering: pixelated;
+}
+
+/* 桌面端拖拽区 */
+.pkt-drag {
+  -webkit-app-region: drag;
+}
+
+.pkt-no-drag {
+  -webkit-app-region: no-drag;
+}
+
+/* 细滚动条，和面板融为一体 */
+.pkt-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--pkt-border-strong) transparent;
+}
+.pkt-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.pkt-scroll::-webkit-scrollbar-thumb {
+  background: var(--pkt-border-strong);
+  border-radius: 999px;
+}
+.pkt-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* 像素风硬阴影，统一给面板/按钮用 */
+.pkt-hard-shadow {
+  box-shadow: 0 2px 0 0 var(--pkt-shadow);
+}
+
+@keyframes pkt-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.pkt-fade-in {
+  animation: pkt-fade-in 160ms ease-out both;
+}
+
+/* 棋盘格底色：预览底板与空态占位共用 */
+.pkt-checker {
+  background-image:
+    linear-gradient(45deg, color-mix(in oklab, var(--foreground) 6%, transparent) 25%, transparent 25%),
+    linear-gradient(-45deg, color-mix(in oklab, var(--foreground) 6%, transparent) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, color-mix(in oklab, var(--foreground) 6%, transparent) 75%),
+    linear-gradient(-45deg, transparent 75%, color-mix(in oklab, var(--foreground) 6%, transparent) 75%);
+  background-size: 12px 12px;
+  background-position: 0 0, 0 6px, 6px -6px, -6px 0;
+}
+
+/* 启动页/空态的点阵底纹：比棋盘格更轻，不抢角色预览 */
+.pkt-dot-grid {
+  background-image: radial-gradient(
+    color-mix(in oklab, var(--foreground) 9%, transparent) 1px,
+    transparent 1px
+  );
+  background-size: 18px 18px;
+  background-position: -1px -1px;
+}

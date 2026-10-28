@@ -1,0 +1,74 @@
+appId: top.pktgf.workshop
+productName: 皮卡堂工坊
+copyright: Copyright © 2026 PicaTown Workshop
+
+directories:
+  output: release
+  buildResources: build
+
+# 只打包构建产物与运行时依赖，源码进 app.asar 没有意义
+files:
+  - out/**/*
+  - package.json
+
+# 目录快照、图标等只读资源放到 resources/，主进程通过 process.resourcesPath 读取
+extraResources:
+  - from: resources/catalog.json.gz
+    to: catalog.json.gz
+  - from: resources/icon.png
+    to: icon.png
+  - from: build/icon.ico
+    to: icon.ico
+
+asar: true
+asarUnpack: []
+
+mac:
+  category: public.app-category.utilities
+  icon: build/icon.icns
+  artifactName: ${name}-${version}-${arch}.${ext}
+  target:
+    - target: dmg
+      arch: [arm64, x64]
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  # 无签名证书：发布未签名包，用户首次需右键打开
+  identity: null
+  darkModeSupport: true
+  extendInfo:
+    NSHumanReadableCopyright: 非官方工具，素材版权归皮卡堂官方所有
+
+win:
+  icon: build/icon.ico
+  target:
+    - target: nsis
+      arch: [x64]
+  artifactName: ${productName}-${version}-${arch}.${ext}
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: false
+  shortcutName: 皮卡堂工坊
+
+linux:
+  icon: build/icon.png
+  maintainer: kyzecx <1191467250@qq.com>
+  syncDesktopName: true
+  target:
+    - AppImage
+    - deb
+  category: Utility
+  synopsis: 皮卡堂工坊桌面端
+  desktop:
+    entry:
+      Name: 皮卡堂工坊
+      Comment: 按官方客户端规则还原的像素搭配工具
+
+# 自动更新：GitHub Releases（未签名包同样适用）
+publish:
+  provider: github
+  owner: kyzecx
+  repo: pktgf-desktop
+  releaseType: release

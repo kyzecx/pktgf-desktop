@@ -1,0 +1,8 @@
+node_modules/
+out/
+dist/
+release/
+resources/
+artifacts/
+src/engine/data/official-spec.json
+package-lock.json

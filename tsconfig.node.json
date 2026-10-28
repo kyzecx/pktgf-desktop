@@ -1,0 +1,33 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": [
+      "node"
+    ],
+    "baseUrl": ".",
+    "paths": {
+      "@shared/*": [
+        "src/shared/*"
+      ],
+      "@engine/*": [
+        "src/engine/*"
+      ]
+    }
+  },
+  "include": [
+    "src/types/**/*.d.ts",
+    "src/main/**/*.ts",
+    "src/preload/**/*.ts",
+    "src/shared/**/*.ts",
+    "src/engine/**/*.ts",
+    "tools/**/*.ts",
+    "electron.vite.config.ts",
+    "vitest.config.ts",
+    "tests/**/*.ts"
+  ],
+  "exclude": [
+    "tools/extract-spec.ts",
+    "tools/verify-engine.ts",
+    "tools/fetch-fixtures.ts"
+  ]
+}
