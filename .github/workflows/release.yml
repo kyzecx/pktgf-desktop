@@ -32,18 +32,19 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # 单台 macOS 同时构建 arm64/x64，避免两个 macOS runner 排队导致发布卡住。
           - os: macos-15
             target: mac
-            arch: arm64
-          - os: macos-15-intel
-            target: mac
-            arch: x64
+            artifact: mac
+            args: '--mac --arm64 --x64'
           - os: windows-latest
             target: win
-            arch: x64
+            artifact: win
+            args: '--win --x64'
           - os: ubuntu-22.04
             target: linux
-            arch: x64
+            artifact: linux
+            args: '--linux --x64'
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -55,7 +56,7 @@ jobs:
 
       - run: npm ci
 
-      # tag 是版本号的唯一来源：v0.2.0 → package.json 0.2.0
+      # tag 是版本号的唯一来源：v0.3.0 → package.json 0.3.0
       - name: Sync version from tag
         if: startsWith(github.ref, 'refs/tags/v')
         shell: bash
@@ -65,7 +66,7 @@ jobs:
         run: npx electron-vite build
 
       - name: Package
-        run: npx electron-builder --${{ matrix.target }} --${{ matrix.arch }} --publish ${{ (startsWith(github.ref, 'refs/tags/v') && github.event.inputs.dry_run != 'true') && 'always' || 'never' }}
+        run: npx electron-builder ${{ matrix.args }} --publish ${{ (startsWith(github.ref, 'refs/tags/v') && github.event.inputs.dry_run != 'true') && 'always' || 'never' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # 无代码签名证书：显式关闭签名，避免 CI 卡在找不到证书
@@ -73,7 +74,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: pktgf-desktop-${{ matrix.target }}-${{ matrix.arch }}
+          name: pktgf-desktop-${{ matrix.artifact }}
           path: |
             release/*.dmg
             release/*.exe

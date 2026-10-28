@@ -23,7 +23,15 @@ export function CatalogThumbnail({
       <OutfitThumbnail item={entry.item} display={view.display} width={width} height={height} />
     )
   }
-  return <ResourceThumbnail entry={entry} petView={view.petView} width={width} height={height} />
+  return (
+    <ResourceThumbnail
+      entry={entry}
+      petView={view.petView}
+      furnitureMode={entry.kind === 'furniture' && view.display === 'small' ? 'icon' : 'frame'}
+      width={width}
+      height={height}
+    />
+  )
 }
 
 function imageStyle(width?: number, height?: number): React.CSSProperties | undefined {
@@ -48,7 +56,7 @@ function OutfitThumbnail({
       src={src}
       alt={item.name}
       loading="lazy"
-      className="pkt-pixelated object-contain"
+      className="pkt-pixelated max-h-52 max-w-full object-contain"
       style={imageStyle(width, height)}
     />
   ) : (
@@ -59,15 +67,17 @@ function OutfitThumbnail({
 function ResourceThumbnail({
   entry,
   petView,
+  furnitureMode,
   width,
   height,
 }: {
   entry: CatalogEntry
   petView: CatalogView['petView']
+  furnitureMode: 'frame' | 'icon'
   width?: number
   height?: number
 }): React.ReactElement {
-  const { src, loading } = useCatalogThumbnail(entry, petView)
+  const { src, loading } = useCatalogThumbnail(entry, petView, furnitureMode)
   if (loading) return <SpinnerRoot size="sm" color="accent" />
   if (!src) return <span className="px-2 text-center text-[10px] text-pkt-text-mute">暂无预览</span>
   return (
@@ -75,7 +85,7 @@ function ResourceThumbnail({
       src={src}
       alt={entry.name}
       loading="lazy"
-      className="pkt-pixelated object-contain"
+      className="pkt-pixelated max-h-52 max-w-full object-contain"
       style={imageStyle(width, height)}
     />
   )

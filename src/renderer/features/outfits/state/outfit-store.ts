@@ -28,7 +28,6 @@ export const PART_LABELS: Record<Part, string> = {
   wing: '翅膀',
 }
 
-export type CategoryLayout = 'vertical' | 'horizontal'
 export type ItemDisplay = 'large' | 'small'
 export type ItemSort = 'newest' | 'oldest' | 'name'
 export type PreviewMode = 'large' | 'small' | 'both'
@@ -43,7 +42,6 @@ export interface SmallViews {
   back: boolean
 }
 
-const CATEGORY_LAYOUT_KEY = 'pkt-outfit-category-layout'
 const ITEM_DISPLAY_KEY = 'pkt-outfit-item-display'
 const PREVIEW_MODE_KEY = 'pkt-outfit-preview-mode'
 const ITEM_SORT_KEY = 'pkt-outfit-item-sort'
@@ -109,7 +107,6 @@ export interface OutfitState {
   /** 是否播放动态物品（眼镜/帽子/连身的逐帧动画） */
   playing: boolean
   /** 分类栏排布：竖排侧栏 / 横排顶栏 */
-  categoryLayout: CategoryLayout
   /** 物品列表缩略图：大模型（100×150）/ 小模型（40×60） */
   itemDisplay: ItemDisplay
   /** 预览区显示：只有大图 / 只有小图 / 两张一起 */
@@ -130,7 +127,6 @@ export interface OutfitState {
   setTransparent: (transparent: boolean) => void
   setFace: (code: string | null) => void
   togglePlaying: () => void
-  toggleCategoryLayout: () => void
   setItemDisplay: (display: ItemDisplay) => void
   setPreviewMode: (mode: PreviewMode) => void
   setItemSort: (sort: ItemSort) => void
@@ -158,7 +154,6 @@ export const useOutfitStore = create<OutfitState>((set) => ({
   worn: {},
   faceCode: null,
   playing: true,
-  categoryLayout: readChoice(CATEGORY_LAYOUT_KEY, ['vertical', 'horizontal'] as const, 'horizontal'),
   itemDisplay: readChoice(ITEM_DISPLAY_KEY, ['large', 'small'] as const, 'large'),
   previewMode: readChoice(PREVIEW_MODE_KEY, ['large', 'small', 'both'] as const, 'both'),
   itemSort: readChoice(ITEM_SORT_KEY, ['newest', 'oldest', 'name'] as const, 'newest'),
@@ -174,13 +169,6 @@ export const useOutfitStore = create<OutfitState>((set) => ({
   setTransparent: (transparent) => set({ transparent }),
   setFace: (faceCode) => set({ faceCode }),
   togglePlaying: () => set((state) => ({ playing: !state.playing })),
-  toggleCategoryLayout: () =>
-    set((state) => {
-      const categoryLayout: CategoryLayout =
-        state.categoryLayout === 'vertical' ? 'horizontal' : 'vertical'
-      persistChoice(CATEGORY_LAYOUT_KEY, categoryLayout)
-      return { categoryLayout }
-    }),
   setItemDisplay: (itemDisplay) => {
     persistChoice(ITEM_DISPLAY_KEY, itemDisplay)
     set({ itemDisplay })

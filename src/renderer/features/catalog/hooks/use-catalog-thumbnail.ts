@@ -7,6 +7,7 @@ import type { CatalogEntry, PetView } from '../types'
 export function useCatalogThumbnail(
   entry: CatalogEntry,
   petView: PetView = 'pet',
+  furnitureMode: 'frame' | 'icon' = 'icon',
 ): {
   src: string | null
   loading: boolean
@@ -18,7 +19,7 @@ export function useCatalogThumbnail(
     let cancelled = false
     setSrc(null)
     setLoading(true)
-    void getEntryThumbnail(entry, petView)
+    void getEntryThumbnail(entry, petView, furnitureMode)
       .then((value) => {
         if (!cancelled) setSrc(value)
       })
@@ -31,7 +32,7 @@ export function useCatalogThumbnail(
     return () => {
       cancelled = true
     }
-  }, [entry, petView])
+  }, [entry, petView, furnitureMode])
 
   return { src, loading }
 }

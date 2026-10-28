@@ -75,6 +75,7 @@ interface PropConfigEntry {
 interface FurniConfigEntry {
   type: number
   code?: string
+  animation?: string
   gridW?: number
   gridH?: number
   direction?: number
@@ -119,6 +120,8 @@ export interface CatalogItem {
   description: string
   zip: string
   md5: string
+  itemZip?: string
+  itemMd5?: string
   useMask: boolean
   coverHead: boolean
   displaytemplate: boolean
@@ -150,6 +153,22 @@ export interface CatalogFurniture {
   gridW: number
   gridH: number
   direction: number
+  motion?: string | null
+  motionFrames?: Array<{ frame: number; duration: number }>
+}
+
+interface MotionFrame {
+  serial?: number
+  duration?: number
+}
+
+interface FurniMotionConfig {
+  frames?: MotionFrame[]
+}
+
+interface PetMotionStep {
+  frame: number
+  duration?: number
 }
 
 export interface CatalogPet {
@@ -163,6 +182,7 @@ export interface CatalogPet {
   eggMd5: string
   gridW: number
   gridH: number
+  motionFrames?: Array<{ frame: number; duration: number }>
 }
 
 export interface Catalog {
@@ -209,6 +229,8 @@ async function main(): Promise<void> {
     decoConfig,
     petConfig,
     petEggConfig,
+    furniMotionConfig,
+    petMotionConfig,
   ] = await Promise.all([
     getConfig<CostumeConfigEntry[]>('config/costumeConfig.json', resourceList),
     getConfig<PropConfigEntry[]>('config/propConfig.json', resourceList),
@@ -221,6 +243,8 @@ async function main(): Promise<void> {
     getConfig<DecoConfigEntry[]>('config/decoConfig.json', resourceList),
     getConfig<PetConfigEntry[]>('config/petConfig.json', resourceList),
     getConfig<PetEggConfigEntry[]>('config/petEggConfig.json', resourceList),
+    getConfig<Record<string, FurniMotionConfig>>('config/furniMotionConfig.json', resourceList),
+    getConfig<Record<string, PetMotionStep[]>>('config/petMotionConfig.json', resourceList),
   ])
 
   const names = new Map<number, PropConfigEntry>()
@@ -228,8 +252,8 @@ async function main(): Promise<void> {
 
   const items = buildItems(costumeConfig, names, resourceList)
   const faces = buildFaces(faceLookConfig, resourceList)
-  const furniture = buildFurniture(furniConfig, decoConfig, names, resourceList)
-  const pets = buildPets(petConfig, petEggConfig, names, resourceList)
+  const furniture = buildFurniture(furniConfig, decoConfig, names, resourceList, furniMotionConfig)
+  const pets = buildPets(petConfig, petEggConfig, names, resourceList, petMotionConfig)
 
   const baseActorKey = pickLatestActor(resourceList)
   const baseActor = { key: baseActorKey, md5: resourceList.get(baseActorKey) ?? '' }
@@ -291,6 +315,8 @@ export function buildItems(
     const zip = `actorCostume/${folder}/${code}.zip`
     const md5 = resourceList.get(zip)
     if (!md5) continue
+    const itemZip = `item/itm${entry.serial}.zip`
+    const itemMd5 = resourceList.get(itemZip)
 
     // 同一个 zip 可能被多个 type 引用（换色），按 code 去重但保留首个名称。
     const key = `${code}:${entry.type}`
@@ -308,6 +334,8 @@ export function buildItems(
       description: prop?.description?.trim() || '',
       zip,
       md5,
+      itemZip: itemMd5 ? itemZip : undefined,
+      itemMd5,
       useMask: Boolean(entry.useMask),
       coverHead: Boolean(entry.coverHead),
       displaytemplate: Boolean(entry.displaytemplate),
@@ -328,6 +356,7 @@ export function buildFurniture(
   decoConfig: DecoConfigEntry[],
   names: Map<number, PropConfigEntry>,
   resourceList: Map<string, string>,
+  motions: Record<string, FurniMotionConfig>,
 ): CatalogFurniture[] {
   const items: CatalogFurniture[] = []
   const seen = new Set<string>()
@@ -356,6 +385,17 @@ export function buildFurniture(
           ? 'tile'
           : code.slice(0, 3).toLowerCase()
 
+    const animation = 'animation' in entry ? (entry as FurniConfigEntry).animation : undefined
+    const motion = animation?.trim() || null
+    const motionFrames = motion
+      ? (motions[motion]?.frames ?? [])
+          .map((frame) => ({
+            frame: Number(frame.serial) || 0,
+            duration: Math.max(0, Number(frame.duration) || 100),
+          }))
+          .filter((frame) => frame.frame > 0)
+      : []
+
     seen.add(code)
     items.push({
       code,
@@ -368,6 +408,8 @@ export function buildFurniture(
       gridW: Number(entry.gridW) || 1,
       gridH: Number(entry.gridH) || 1,
       direction: Number(entry.direction) || 1,
+      motion,
+      motionFrames: motionFrames.length > 0 ? motionFrames : undefined,
     })
   }
 
@@ -386,11 +428,21 @@ export function buildPets(
   petEggConfig: PetEggConfigEntry[],
   names: Map<number, PropConfigEntry>,
   resourceList: Map<string, string>,
+  petMotions: Record<string, PetMotionStep[]>,
 ): CatalogPet[] {
   const eggs = new Map<number, PetEggConfigEntry>()
   for (const egg of petEggConfig) {
     if (typeof egg.type === 'number') eggs.set(egg.type, egg)
   }
+
+  const defaultMotion =
+    petMotions.walk ?? Object.values(petMotions).find((steps) => steps.length > 1) ?? []
+  const motionFrames = defaultMotion
+    .map((step) => ({
+      frame: Number(step.frame) || 0,
+      duration: Math.max(0, Number(step.duration) || 100),
+    }))
+    .filter((step) => step.frame > 0)
 
   const pets: CatalogPet[] = []
   for (const entry of petConfig) {
@@ -417,6 +469,7 @@ export function buildPets(
       eggMd5,
       gridW: Number(entry.gridW) || 1,
       gridH: Number(entry.gridH) || 1,
+      motionFrames: motionFrames.length > 0 ? motionFrames : undefined,
     })
   }
 

@@ -1,4 +1,10 @@
-import { openBundle, readSymbolImage, type OfficialBundle, type RgbaImage } from '@engine/index'
+import {
+  encodeGif,
+  openBundle,
+  readSymbolImage,
+  type OfficialBundle,
+  type RgbaImage,
+} from '@engine/index'
 import type { CatalogFurniture, CatalogItem, CatalogPet } from '@shared/contract'
 import { getCostume, resourceUrl, toBase64, toDataUrl, toPngBase64 } from '@/services/assets'
 import { frameKey, type CatalogEntry, type CatalogKind, type PetView } from './types'
@@ -26,11 +32,18 @@ export interface FrameGroup {
   frames: FrameImage[]
 }
 
+export interface GifSequence {
+  frames: FrameImage[]
+  delays: number[]
+}
+
 export interface EntryFrames {
   groups: FrameGroup[]
   /** 服饰原始 700×840 sheet；家具/宠物没有。 */
   sheet?: RgbaImage
   total: number
+  /** 可导出的动画序列；没有动态帧时为 undefined。 */
+  gif?: GifSequence
 }
 
 /** 所有图鉴包都走同一个 pktres 缓存；这里只做内存 bundle 缓存。 */
@@ -108,6 +121,17 @@ function furnitureImage(item: CatalogFurniture): Promise<RgbaImage | null> {
   })
 }
 
+/** 家具大图：实际渲染帧，而不是 43×43 缩略图。 */
+function furnitureFrameImage(item: CatalogFurniture): Promise<RgbaImage | null> {
+  return getBundle(item.zip, item.md5).then((bundle) => {
+    const name =
+      findSymbol(bundle, [`${item.code}_3_01`, `${item.code}_3_1`, `${item.code}_1`]) ??
+      frameSymbols(bundle)[0] ??
+      null
+    return name ? readImage(bundle, name) : null
+  })
+}
+
 function petImage(item: CatalogPet, mode: 'pet' | 'egg'): Promise<RgbaImage | null> {
   const zip = mode === 'pet' ? item.petZip : item.eggZip
   const md5 = mode === 'pet' ? item.petMd5 : item.eggMd5
@@ -129,18 +153,46 @@ function trimThumbnailCache(): void {
   }
 }
 
+/** 卖货图模板二使用背包道具图标；没有图标包时退回资源缩略图。 */
+export async function getSaleIcon(entry: CatalogEntry): Promise<string | null> {
+  if (entry.kind === 'outfit' && entry.item?.itemZip && entry.item.itemMd5) {
+    try {
+      const bundle = await getBundle(entry.item.itemZip, entry.item.itemMd5)
+      const serial = entry.item.serial
+      const name =
+        findSymbol(bundle, [`itm${serial}_3_01`, `itm${serial}`]) ?? frameSymbols(bundle)[0] ?? null
+      const image = name ? readImage(bundle, name) : null
+      if (image) return toDataUrl(image)
+    } catch (error) {
+      console.warn('[catalog] 读取道具图标失败', entry.code, error)
+    }
+  }
+  return getEntryThumbnail(entry)
+}
+
 export function getEntryThumbnail(
   entry: CatalogEntry,
   petView: PetView = 'pet',
+  furnitureMode: 'frame' | 'icon' = 'icon',
 ): Promise<string | null> {
-  const cacheKey = entry.kind === 'pet' ? `${entry.key}:${petView}` : entry.key
+  const cacheKey =
+    entry.kind === 'pet'
+      ? `${entry.key}:${petView}`
+      : entry.kind === 'furniture'
+        ? `${entry.key}:${furnitureMode}`
+        : entry.key
   const cached = thumbnailCache.get(cacheKey)
   if (cached) return cached
 
   const task = (async () => {
     let image: RgbaImage | null = null
     if (entry.kind === 'outfit' && entry.item) image = await outfitImage(entry.item)
-    if (entry.kind === 'furniture' && entry.furniture) image = await furnitureImage(entry.furniture)
+    if (entry.kind === 'furniture' && entry.furniture) {
+      image =
+        furnitureMode === 'frame'
+          ? await furnitureFrameImage(entry.furniture)
+          : await furnitureImage(entry.furniture)
+    }
     if (entry.kind === 'pet' && entry.pet) image = await petImage(entry.pet, petView)
     return image ? toDataUrl(image) : null
   })().catch((error) => {
@@ -164,6 +216,105 @@ function frameFromBundle(bundle: OfficialBundle, label: string, dir: string): Fr
     if (image) frames.push({ name: className, image })
   }
   return { label, dir, frames }
+}
+
+const GIF_DELAY_MS = 100
+
+function sameSize(frames: FrameImage[]): FrameImage[] {
+  const first = frames[0]
+  if (!first) return []
+  return frames.filter(
+    (frame) => frame.image.width === first.image.width && frame.image.height === first.image.height,
+  )
+}
+
+function gifSequence(frames: FrameImage[], delays?: number[]): GifSequence | undefined {
+  const usable = sameSize(frames)
+  if (usable.length < 2) return undefined
+  return {
+    frames: usable,
+    delays: usable.map((_, index) => Math.max(30, delays?.[index] ?? GIF_DELAY_MS)),
+  }
+}
+
+/** 家具包：优先按官方 motion 的 serial/duration 播放，再回退到状态顺序。 */
+function furnitureGif(
+  frames: FrameImage[],
+  motionFrames?: Array<{ frame: number; duration: number }>,
+): GifSequence | undefined {
+  const byDirection = new Map<number, Map<number, FrameImage>>()
+  for (const frame of frames) {
+    const match = /_([1357])_(\d+)$/.exec(frame.name)
+    if (!match) continue
+    const direction = Number(match[1])
+    const state = Number(match[2])
+    const states = byDirection.get(direction) ?? new Map<number, FrameImage>()
+    states.set(state, frame)
+    byDirection.set(direction, states)
+  }
+  if (byDirection.size === 0) return gifSequence(frames)
+
+  const entries = [...byDirection.entries()].sort((left, right) => {
+    const preferred = (value: number): number => (value === 3 ? 0 : value === 7 ? 1 : 2)
+    return right[1].size - left[1].size || preferred(left[0]) - preferred(right[0])
+  })
+  const states = entries[0]?.[1]
+  if (!states) return undefined
+
+  if (motionFrames && motionFrames.length > 1) {
+    const framesFromMotion: FrameImage[] = []
+    const delays: number[] = []
+    for (const step of motionFrames) {
+      const image = states.get(step.frame)
+      if (!image) continue
+      framesFromMotion.push(image)
+      delays.push(step.duration)
+    }
+    const sequence = gifSequence(framesFromMotion, delays)
+    if (sequence) return sequence
+  }
+
+  const ordered = [...states.entries()]
+    .sort((left, right) => left[0] - right[0])
+    .map((entry) => entry[1])
+  return gifSequence(ordered)
+}
+
+/** 宠物包：按官方 walk motion 的帧序列/时长播放。 */
+function petGif(
+  frames: FrameImage[],
+  motionFrames?: Array<{ frame: number; duration: number }>,
+): GifSequence | undefined {
+  const byDirection = new Map<number, Map<number, FrameImage>>()
+  for (const frame of frames) {
+    const match = /_(\d{3})_([37])$/.exec(frame.name)
+    if (!match) continue
+    const index = Number(match[1])
+    const direction = Number(match[2])
+    const indices = byDirection.get(direction) ?? new Map<number, FrameImage>()
+    indices.set(index, frame)
+    byDirection.set(direction, indices)
+  }
+  const indices = byDirection.get(3) ?? byDirection.get(7)
+  if (!indices) return undefined
+
+  if (motionFrames && motionFrames.length > 1) {
+    const framesFromMotion: FrameImage[] = []
+    const delays: number[] = []
+    for (const step of motionFrames) {
+      const image = indices.get(step.frame)
+      if (!image) continue
+      framesFromMotion.push(image)
+      delays.push(step.duration)
+    }
+    const sequence = gifSequence(framesFromMotion, delays)
+    if (sequence) return sequence
+  }
+
+  const ordered = [...indices.entries()]
+    .sort((left, right) => left[0] - right[0])
+    .map((entry) => entry[1])
+  return gifSequence(ordered)
 }
 
 export async function getEntryFrames(entry: CatalogEntry): Promise<EntryFrames> {
@@ -192,6 +343,7 @@ export async function getEntryFrames(entry: CatalogEntry): Promise<EntryFrames> 
       groups: [{ label: '帧', dir: 'frames', frames }],
       sheet,
       total: frames.length,
+      gif: gifSequence(frames),
     }
   }
 
@@ -199,7 +351,11 @@ export async function getEntryFrames(entry: CatalogEntry): Promise<EntryFrames> 
     const item = entry.furniture
     const bundle = await getBundle(item.zip, item.md5)
     const group = frameFromBundle(bundle, '帧', 'frames')
-    return { groups: [group], total: group.frames.length }
+    return {
+      groups: [group],
+      total: group.frames.length,
+      gif: furnitureGif(group.frames, item.motionFrames),
+    }
   }
 
   if (entry.kind === 'pet' && entry.pet) {
@@ -212,7 +368,11 @@ export async function getEntryFrames(entry: CatalogEntry): Promise<EntryFrames> 
       frameFromBundle(petBundle, '宠物帧', 'pet/frames'),
       frameFromBundle(eggBundle, '宠物蛋帧', 'egg/frames'),
     ]
-    return { groups, total: groups.reduce((sum, group) => sum + group.frames.length, 0) }
+    return {
+      groups,
+      total: groups.reduce((sum, group) => sum + group.frames.length, 0),
+      gif: petGif(groups[0]?.frames ?? [], item.motionFrames),
+    }
   }
 
   return { groups: [], total: 0 }
@@ -264,6 +424,81 @@ function metadataBase64(
     sheet: frames.sheet ? 'sheet.png' : null,
   }
   return toBase64(new TextEncoder().encode(JSON.stringify(metadata, null, 2)))
+}
+
+export interface OriginalExport {
+  files: Array<{ path: string; base64: string }>
+  folder: string
+  imageCount: number
+}
+
+const ORIGINAL_IMAGE = /\.(png|jpe?g|webp)$/i
+
+/** 原图导出：直接写 zip 里的 PNG/JPG，不裁切、不重新编码。 */
+export async function createOriginalExport(entry: CatalogEntry): Promise<OriginalExport> {
+  const folderName = safeSegment(`${entry.code}_${entry.name}`)
+  const folder = `皮卡堂图鉴/${CATEGORY_DIR[entry.kind]}/${folderName}`
+  const files: Array<{ path: string; base64: string }> = []
+  const images: string[] = []
+
+  const addBundle = (bundle: OfficialBundle, prefix = ''): void => {
+    for (const [name, data] of bundle.files) {
+      if (!ORIGINAL_IMAGE.test(name)) continue
+      const relative = `${prefix}${name}`
+      images.push(relative)
+      files.push({
+        path: `${folder}/original/${relative}`,
+        base64: toBase64(data),
+      })
+    }
+  }
+
+  if (entry.kind === 'outfit' && entry.item) {
+    addBundle(await getBundle(entry.item.zip, entry.item.md5))
+  } else if (entry.kind === 'furniture' && entry.furniture) {
+    addBundle(await getBundle(entry.furniture.zip, entry.furniture.md5))
+  } else if (entry.kind === 'pet' && entry.pet) {
+    const [petBundle, eggBundle] = await Promise.all([
+      getBundle(entry.pet.petZip, entry.pet.petMd5),
+      getBundle(entry.pet.eggZip, entry.pet.eggMd5),
+    ])
+    addBundle(petBundle, 'pet/')
+    addBundle(eggBundle, 'egg/')
+  }
+
+  files.push({
+    path: `${folder}/original/metadata.json`,
+    base64: toBase64(
+      new TextEncoder().encode(
+        JSON.stringify({ code: entry.code, name: entry.name, images }, null, 2),
+      ),
+    ),
+  })
+
+  return { files, folder, imageCount: images.length }
+}
+
+export interface GifExport {
+  file: { path: string; base64: string }
+  frameCount: number
+}
+
+/** 动态图鉴直接导出循环 GIF；只有一帧时返回 null。 */
+export async function createEntryGif(entry: CatalogEntry): Promise<GifExport | null> {
+  const frames = await getEntryFrames(entry)
+  if (!frames.gif || frames.gif.frames.length < 2) return null
+  const bytes = encodeGif(
+    frames.gif.frames.map((frame) => frame.image),
+    frames.gif.delays,
+  )
+  const folderName = safeSegment(`${entry.code}_${entry.name}`)
+  return {
+    file: {
+      path: `皮卡堂图鉴/${CATEGORY_DIR[entry.kind]}/${folderName}/animation.gif`,
+      base64: toBase64(bytes),
+    },
+    frameCount: frames.gif.frames.length,
+  }
 }
 
 export interface EntryExport {

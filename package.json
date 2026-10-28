@@ -1,7 +1,7 @@
 {
   "name": "pktgf-desktop",
   "productName": "皮卡堂工坊",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "皮卡堂工坊桌面端 — 高保真像素搭配工具",
   "license": "MIT",

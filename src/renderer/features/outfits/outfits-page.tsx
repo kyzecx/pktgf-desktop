@@ -1,7 +1,6 @@
 import * as React from 'react'
 
 import type { Catalog, CatalogAssets, CatalogItem, Part, SaveRecord } from '@shared/contract'
-import { ButtonRoot } from '@heroui/react'
 import { useFloatingStore } from '@ui/floating'
 import {
   SearchField,
@@ -11,7 +10,6 @@ import {
   ToolbarSearch,
   ToolbarSubbar,
 } from '@ui/toolbar'
-import { IconLayoutHorizontal, IconLayoutVertical } from '@ui/icons'
 import { ListSettingsButton, ListSettingsWindow } from '@features/shared/list-settings'
 import { useSearchShortcut } from '@ui/shortcuts'
 import { useRecentItems } from '@ui/recent-items'
@@ -49,8 +47,6 @@ export function OutfitsPage({
   const search = useOutfitStore((state) => state.search)
   const [allSearch, setAllSearch] = React.useState(true)
   const worn = useOutfitStore((state) => state.worn)
-  const categoryLayout = useOutfitStore((state) => state.categoryLayout)
-  const toggleCategoryLayout = useOutfitStore((state) => state.toggleCategoryLayout)
   const itemDisplay = useOutfitStore((state) => state.itemDisplay)
   const listColumns = useOutfitStore((state) => state.listColumns)
   const itemSort = useOutfitStore((state) => state.itemSort)
@@ -163,8 +159,6 @@ export function OutfitsPage({
     if (worn[item.part]?.code !== item.code) store.toggle(item)
   }
 
-  const isVertical = categoryLayout === 'vertical'
-
   return (
     <div className="flex h-full min-h-0 flex-col">
       <ToolbarRoot>
@@ -187,49 +181,18 @@ export function OutfitsPage({
       </ToolbarRoot>
 
       <ToolbarSubbar>
-        {isVertical ? (
-          <span className="text-[10px] text-pkt-text-mute">分类已移到左侧</span>
-        ) : (
-          <div className="min-w-0 flex-1">
-            <CategoryTabs
-              counts={counts}
-              active={part}
-              icons={icons}
-              orientation="horizontal"
-              onSelect={(next) => store.setPart(next)}
-            />
-          </div>
-        )}
-        <ToolbarActions>
-          <ButtonRoot
-            size="sm"
-            variant="ghost"
-            isIconOnly
-            aria-label={isVertical ? '分类改为横排' : '分类改为竖排'}
-            onPress={toggleCategoryLayout}
-          >
-            {isVertical ? (
-              <IconLayoutHorizontal className="size-4" />
-            ) : (
-              <IconLayoutVertical className="size-4" />
-            )}
-          </ButtonRoot>
-        </ToolbarActions>
+        <div className="min-w-0 flex-1">
+          <CategoryTabs
+            counts={counts}
+            active={part}
+            icons={icons}
+            orientation="horizontal"
+            onSelect={(next) => store.setPart(next)}
+          />
+        </div>
       </ToolbarSubbar>
 
       <div className="flex min-h-0 flex-1">
-        {isVertical ? (
-          <div className="flex w-14 shrink-0 flex-col border-r border-pkt-border/70">
-            <CategoryTabs
-              counts={counts}
-              active={part}
-              icons={icons}
-              orientation="vertical"
-              onSelect={(next) => store.setPart(next)}
-            />
-          </div>
-        ) : null}
-
         <section className="flex min-w-0 flex-1 flex-col">
           <div className="min-h-0 flex-1 p-3">
             <ItemGrid

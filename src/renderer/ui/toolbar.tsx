@@ -44,7 +44,7 @@ export function ToolbarSubbar({
   return (
     <div
       className={cn(
-        'flex min-h-10 shrink-0 flex-wrap items-center gap-1 border-b border-pkt-border/60 px-3 py-1.5',
+        'flex min-h-10 shrink-0 flex-nowrap items-center gap-1 border-b border-pkt-border/60 px-3 py-1.5',
         className,
       )}
     >

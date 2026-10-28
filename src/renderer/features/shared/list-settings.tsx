@@ -52,7 +52,13 @@ export function ListSettingsButton(): React.ReactElement {
 }
 
 /** 列表显示和每行数量的二级菜单；搭配页和图鉴页共享同一个设置。 */
-export function ListSettingsWindow(): React.ReactElement {
+export function ListSettingsWindow({
+  extra,
+  hideDisplay = false,
+}: {
+  extra?: React.ReactNode
+  hideDisplay?: boolean
+}): React.ReactElement {
   const display = useOutfitStore((state) => state.itemDisplay)
   const setDisplay = useOutfitStore((state) => state.setItemDisplay)
   const columns = useOutfitStore((state) => state.listColumns)
@@ -68,21 +74,23 @@ export function ListSettingsWindow(): React.ReactElement {
       defaultPosition={{ x: 280, y: 96 }}
     >
       <div className="flex flex-col gap-3 p-3 text-[11px]">
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-pkt-text-mute">列表显示</span>
-          <div className="flex items-center gap-1">
-            {(['large', 'small'] as const).map((value) => (
-              <ButtonRoot
-                key={value}
-                size="sm"
-                variant={display === value ? 'primary' : 'ghost'}
-                onPress={() => setDisplay(value)}
-              >
-                {value === 'large' ? '大图' : '小图'}
-              </ButtonRoot>
-            ))}
+        {hideDisplay ? null : (
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-pkt-text-mute">列表显示</span>
+            <div className="flex items-center gap-1">
+              {(['large', 'small'] as const).map((value) => (
+                <ButtonRoot
+                  key={value}
+                  size="sm"
+                  variant={display === value ? 'primary' : 'ghost'}
+                  onPress={() => setDisplay(value)}
+                >
+                  {value === 'large' ? '大图' : '小图'}
+                </ButtonRoot>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="flex items-center justify-between gap-3">
           <span className="text-pkt-text-mute">每行数量</span>
@@ -98,6 +106,8 @@ export function ListSettingsWindow(): React.ReactElement {
             ))}
           </select>
         </div>
+
+        {extra}
 
         <div className="flex items-center justify-between gap-3">
           <span className="text-pkt-text-mute">排序</span>

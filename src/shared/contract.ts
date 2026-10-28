@@ -13,6 +13,9 @@ export interface CatalogItem {
   description: string
   zip: string
   md5: string
+  /** 背包道具图标包（item/itm<serial>.zip） */
+  itemZip?: string
+  itemMd5?: string
   useMask: boolean
   coverHead: boolean
   displaytemplate: boolean
@@ -39,6 +42,9 @@ export interface CatalogFurniture {
   gridW: number
   gridH: number
   direction: number
+  /** 官方家居动画（名称）与其帧时长，用于 GIF / 预览。 */
+  motion?: string | null
+  motionFrames?: Array<{ frame: number; duration: number }>
 }
 
 /** 宠物图鉴条目；宠物本体和宠物蛋是两个资源包。 */
@@ -53,6 +59,8 @@ export interface CatalogPet {
   eggMd5: string
   gridW: number
   gridH: number
+  /** 默认宠物动作（walk）的帧与时长。 */
+  motionFrames?: Array<{ frame: number; duration: number }>
 }
 
 export interface CatalogMeta {

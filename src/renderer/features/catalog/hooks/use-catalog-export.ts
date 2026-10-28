@@ -1,6 +1,6 @@
 import * as React from 'react'
 
-import { createEntryExport } from '../services'
+import { createEntryExport, createEntryGif, createOriginalExport } from '../services'
 import type { CatalogEntry } from '../types'
 
 export interface CatalogExportTarget {
@@ -33,6 +33,8 @@ const INITIAL: CatalogExportState = {
 export function useCatalogExport(): {
   state: CatalogExportState
   start: (targets: CatalogExportTarget[], label: string) => Promise<void>
+  startOriginals: (targets: CatalogExportTarget[], label: string) => Promise<void>
+  startGif: (entry: CatalogEntry) => Promise<void>
   cancel: () => void
   reset: () => void
 } {
@@ -96,6 +98,100 @@ export function useCatalogExport(): {
     }))
   }, [])
 
+  const startOriginals = React.useCallback(
+    async (targets: CatalogExportTarget[], label: string) => {
+      if (runningRef.current || targets.length === 0) return
+      if (targets.length > 20) {
+        const confirmed = window.confirm(
+          `将下载 ${targets.length.toLocaleString()} 个物品的原图（未裁切雪碧图）。\n\n` +
+            '文件会按「皮卡堂图鉴 / 分类 / 物品代码_名称 / original」自动建文件夹。\n' +
+            '数量较多时需要较长时间，过程中可以随时取消。',
+        )
+        if (!confirmed) return
+      }
+
+      const directory = await window.pkt.chooseDirectory()
+      if (!directory) return
+
+      runningRef.current = true
+      cancelRef.current = false
+      setState({
+        running: true,
+        done: 0,
+        total: targets.length,
+        current: targets[0]?.entry.name ?? label,
+        rootPath: directory.path,
+        error: null,
+        finished: false,
+      })
+
+      let firstError: string | null = null
+      for (let index = 0; index < targets.length; index += 1) {
+        if (cancelRef.current) break
+        const target = targets[index]!
+        setState((current) => ({ ...current, current: target.entry.name }))
+        try {
+          const output = await createOriginalExport(target.entry)
+          await window.pkt.writeExportFiles({ token: directory.token, files: output.files })
+        } catch (error) {
+          firstError = error instanceof Error ? error.message : String(error)
+          break
+        }
+        setState((current) => ({ ...current, done: index + 1 }))
+      }
+
+      runningRef.current = false
+      setState((current) => ({
+        ...current,
+        running: false,
+        current: '',
+        error: firstError,
+        finished: !firstError && !cancelRef.current,
+      }))
+    },
+    [],
+  )
+
+  const startGif = React.useCallback(async (entry: CatalogEntry) => {
+    if (runningRef.current) return
+    const directory = await window.pkt.chooseDirectory()
+    if (!directory) return
+
+    runningRef.current = true
+    cancelRef.current = false
+    setState({
+      running: true,
+      done: 0,
+      total: 1,
+      current: entry.name,
+      rootPath: directory.path,
+      error: null,
+      finished: false,
+    })
+
+    try {
+      const output = await createEntryGif(entry)
+      if (!output) throw new Error('这个物品没有可导出的动态帧')
+      await window.pkt.writeExportFiles({ token: directory.token, files: [output.file] })
+      setState((current) => ({
+        ...current,
+        running: false,
+        done: 1,
+        current: '',
+        finished: true,
+      }))
+    } catch (error) {
+      setState((current) => ({
+        ...current,
+        running: false,
+        current: '',
+        error: error instanceof Error ? error.message : String(error),
+      }))
+    } finally {
+      runningRef.current = false
+    }
+  }, [])
+
   const cancel = React.useCallback(() => {
     cancelRef.current = true
   }, [])
@@ -104,5 +200,5 @@ export function useCatalogExport(): {
     if (!runningRef.current) setState(INITIAL)
   }, [])
 
-  return { state, start, cancel, reset }
+  return { state, start, startOriginals, startGif, cancel, reset }
 }

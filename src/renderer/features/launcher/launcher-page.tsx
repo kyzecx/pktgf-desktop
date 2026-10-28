@@ -194,6 +194,28 @@ export function LauncherPage({
             </section>
 
             <UpdateCard info={info} />
+
+            <section className="rounded-xl border border-pkt-border/70 bg-surface/40 p-3">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <h2 className="text-[13px] font-medium text-pkt-text">喜欢皮卡堂工坊？</h2>
+                  <p className="mt-0.5 text-[10px] text-pkt-text-mute">
+                    去 GitHub 点个 Star 支持一下
+                  </p>
+                </div>
+                <span className="text-lg text-pkt-warn">★</span>
+              </div>
+              <ButtonRoot
+                className="mt-2 w-full"
+                size="sm"
+                variant="outline"
+                onPress={() =>
+                  void window.pkt.openExternal('https://github.com/kyzecx/pktgf-desktop')
+                }
+              >
+                GitHub · 给个 Star
+              </ButtonRoot>
+            </section>
           </aside>
         </div>
 
