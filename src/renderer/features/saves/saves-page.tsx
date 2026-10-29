@@ -100,6 +100,7 @@ export function SavesPage({
     if (saves.length === 0) return
     const payload = serializeSaveBundle(saves)
     await window.pkt.saveFile({
+      useExportDir: true,
       suggestedName: `pktgf-saves-${Date.now()}.json`,
       dataBase64: toBase64(new TextEncoder().encode(payload)),
     })

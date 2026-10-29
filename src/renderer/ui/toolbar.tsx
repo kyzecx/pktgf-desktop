@@ -137,6 +137,8 @@ export function SearchField({
   onChange: (value: string) => void
 }): React.ReactElement {
   const [open, setOpen] = React.useState(false)
+  // 只有「用户主动点进输入框」才展开历史；程序化 focus（比如空格打开面板）不弹
+  const userOpened = React.useRef(false)
 
   return (
     <div className="relative w-64 shrink-0">
@@ -146,8 +148,19 @@ export function SearchField({
         value={value}
         placeholder={placeholder}
         autoComplete="off"
-        onFocus={() => setOpen(true)}
-        onBlur={() => window.setTimeout(() => setOpen(false), 120)}
+        onPointerDown={() => {
+          userOpened.current = true
+        }}
+        onKeyDownCapture={() => {
+          userOpened.current = true
+        }}
+        onFocus={() => {
+          if (userOpened.current) setOpen(true)
+        }}
+        onBlur={() => {
+          userOpened.current = false
+          window.setTimeout(() => setOpen(false), 120)
+        }}
         onKeyDown={(event) => {
           if (event.key === 'Escape') setOpen(false)
         }}

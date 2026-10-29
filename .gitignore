@@ -29,6 +29,8 @@ artifacts/
 # 逆向/规格资料只保留本地，不进入公开仓库
 docs/official-outfit-spec.md
 docs/plan.md
+docs/room-spec.md
+docs/room-plan.md
 docs/images/
 tools/extract-spec.ts
 tools/verify-engine.ts

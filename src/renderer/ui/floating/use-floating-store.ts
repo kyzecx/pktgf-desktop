@@ -4,7 +4,7 @@ import { create } from 'zustand'
  * 全局浮窗管理。
  *
  * 任何功能都可以注册自己的浮窗 id：位置、层级、开关状态统一在这里，
- * 后续建房/家具页复用同一套行为，不用各写一份拖拽逻辑。
+ * 后续建造/家具页复用同一套行为，不用各写一份拖拽逻辑。
  */
 
 export interface FloatingPosition {

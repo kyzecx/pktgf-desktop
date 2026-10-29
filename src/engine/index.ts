@@ -12,6 +12,7 @@ export {
   createImage,
   crop,
   flattenOnColor,
+  flipHorizontal,
   scaleNearest,
   hasWhiteBackdrop,
   whiteKeyBackdrop,

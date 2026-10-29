@@ -210,6 +210,7 @@ function SlotActions({
   const onExport = async (): Promise<void> => {
     const payload = serializeSaveBundle(slots)
     await window.pkt.saveFile({
+      useExportDir: true,
       suggestedName: `pktgf-saves-${Date.now()}.json`,
       dataBase64: toBase64(new TextEncoder().encode(payload)),
     })

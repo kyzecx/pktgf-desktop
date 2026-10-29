@@ -61,8 +61,30 @@ export function CatalogProvider({ children }: { children: React.ReactNode }): Re
     }
 
     void bootstrap()
+
+    // 主进程自动更新了目录（官方换了 md5）→ 重新拉一次
+    const off = window.pkt.onResourceUpdated((status) => {
+      void (async () => {
+        try {
+          const payload = await window.pkt.getCatalog()
+          if (cancelled) return
+          setState((previous) => ({
+            ...previous,
+            catalog: JSON.parse(payload.json) as Catalog,
+            meta: payload.meta,
+            assets: payload.assets,
+            version: status,
+            error: null,
+          }))
+        } catch {
+          // 拉取失败就保持旧目录，下次启动会再应用补丁
+        }
+      })()
+    })
+
     return () => {
       cancelled = true
+      off()
     }
   }, [])
 

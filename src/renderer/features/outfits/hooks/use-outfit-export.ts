@@ -53,6 +53,7 @@ export function useOutfitExport({
       if (!dataUrl) return
       const base64 = dataUrl.slice(dataUrl.indexOf(',') + 1)
       await window.pkt.saveFile({
+        useExportDir: true,
         suggestedName: `pktgf-outfit-${Date.now()}.png`,
         dataBase64: base64,
       })
@@ -80,6 +81,7 @@ export function useOutfitExport({
       if (frames.length === 0) return
 
       await window.pkt.saveFile({
+        useExportDir: true,
         suggestedName: `pktgf-outfit-${Date.now()}.gif`,
         dataBase64: toBase64(encodeGif(frames, delays)),
       })

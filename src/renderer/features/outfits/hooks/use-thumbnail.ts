@@ -113,9 +113,13 @@ async function renderSmall(item: CatalogItem, sex: ThumbnailSex): Promise<string
 
   const [base, art] = await Promise.all([getSmallBaseActor(thumbnailAssets), getSmallCostume(item)])
   // 只看服饰本身的小图；基础身体永远有像素，不能拿整张合成图判断。
-  const hasSmallArt = [art.front.head, art.front.body, art.front.arm, art.front.leg].some(
-    (image) => image && hasVisiblePixels(image),
-  )
+  // 头/臂/腿现在是帧数组（官方按帧号取），任意一帧有像素就算有内容。
+  const hasSmallArt = [
+    art.front.head?.[0],
+    art.front.body,
+    art.front.arm?.[0],
+    art.front.leg?.[0],
+  ].some((image) => image && hasVisiblePixels(image))
   if (!hasSmallArt) return renderLarge(item, sex)
 
   const composed = composeSmallActor({

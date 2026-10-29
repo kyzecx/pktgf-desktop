@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import { registerIpcHandlers } from './ipc'
 import { buildMenu } from './menu'
 import { registerProtocolHandlers, registerSchemes } from './protocols'
-import { checkResourceVersion } from './services/version-watch'
+import { checkResourceVersion, startVersionWatch } from './services/version-watch'
 import { createMainWindow, openExternal } from './window'
 
 const APP_NAME = '皮卡堂工坊'
@@ -69,8 +69,9 @@ void app.whenReady().then(async () => {
     mainWindow = null
   })
 
-  // 后台校验官方客户端版本，不阻塞启动
+  // 后台校验官方客户端版本，不阻塞启动；之后每 5 分钟自动检查并更新
   void checkResourceVersion()
+  startVersionWatch()
 
   // 开发/CI 用：PKT_SCREENSHOT=/path/to.png 时自动截屏并退出
   const screenshot = process.env.PKT_SCREENSHOT
@@ -82,11 +83,35 @@ void app.whenReady().then(async () => {
       app.quit()
     }, 5000)
   } else if (screenshot) {
+    // 可选：PKT_ROUTE=room 先跳到指定页面，PKT_SCREENSHOT_DELAY 控制等待毫秒
+    if (process.env.PKT_ROUTE) {
+      void mainWindow?.webContents.executeJavaScript(`location.hash = '#/${process.env.PKT_ROUTE}'`)
+    }
+    // 可选：PKT_CLICK_TEXT=导出 先点一下这个按钮；
+    // PKT_EVAL='<js>' 执行一段脚本（截图验证浮层/交互链路用）
+    const clickText = process.env.PKT_CLICK_TEXT
+    if (clickText) {
+      setTimeout(() => {
+        void mainWindow?.webContents.executeJavaScript(
+          `[...document.querySelectorAll('button')].find((el) => el.textContent?.includes(${JSON.stringify(clickText)}))?.click()`,
+        )
+      }, 2500)
+    }
+    const evalScript = process.env.PKT_EVAL
+    if (evalScript) {
+      setTimeout(() => {
+        void mainWindow?.webContents
+          .executeJavaScript(evalScript)
+          .then((result: unknown) => console.info('[dev] PKT_EVAL →', result))
+          .catch((error: unknown) => console.warn('[dev] PKT_EVAL 执行失败', error))
+      }, 2500)
+    }
+    const delay = Number(process.env.PKT_SCREENSHOT_DELAY ?? 4000)
     setTimeout(async () => {
       const image = await mainWindow?.webContents.capturePage()
       if (image) await writeFile(screenshot, image.toPNG())
       app.quit()
-    }, 4000)
+    }, delay)
   }
 
   app.on('activate', async () => {

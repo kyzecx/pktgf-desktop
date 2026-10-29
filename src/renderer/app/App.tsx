@@ -7,13 +7,24 @@ import { useRoute, type Route } from './use-route'
 import { LauncherPage } from '@features/launcher/launcher-page'
 import { CatalogPage } from '@features/catalog/catalog-page'
 import { OutfitsPage } from '@features/outfits/outfits-page'
+import { RoomPage } from '@features/room/room-page'
 import { SettingsPage } from '@features/settings/settings-page'
 import { SavesPage } from '@features/saves/saves-page'
 import { applyOutfitSave } from '@features/outfits/state/outfit-save'
-import { IconBook, IconFolder, IconMoon, IconSettings, IconShirt, IconSun } from '@ui/icons'
+import { isRoomSaveData, setPendingRoomSave } from '@features/room/state/pending-room-save'
+import {
+  IconBook,
+  IconFolder,
+  IconHouse,
+  IconMoon,
+  IconSettings,
+  IconShirt,
+  IconSun,
+} from '@ui/icons'
 import { useTheme } from '@ui/theme'
 import logo from '@/assets/pktgf-logo.png'
 import { AppShell, NavRail, StatusBar, TitleBar } from '@ui/layout'
+import { WhatsNewGate } from '@ui/whats-new'
 import { formatResourceTime } from '@ui/format'
 import { EmptyStateRoot, SpinnerRoot } from '@heroui/react'
 
@@ -24,6 +35,7 @@ const NAV = [
     icon: <img src={logo} alt="" draggable={false} className="size-6 rounded-md object-cover" />,
   },
   { key: 'outfits' as const, label: '搭配', icon: <IconShirt /> },
+  { key: 'room' as const, label: '建造', icon: <IconHouse /> },
   { key: 'catalog' as const, label: '图鉴', icon: <IconBook /> },
   { key: 'saves' as const, label: '存档', icon: <IconFolder /> },
 ]
@@ -31,6 +43,7 @@ const NAV = [
 const ROUTE_TITLE: Record<Route, string> = {
   launcher: '皮卡堂工坊',
   outfits: '搭配 · 在线衣柜',
+  room: '建造 · 装修',
   catalog: '图鉴',
   saves: '存档管理',
   settings: '设置',
@@ -40,6 +53,7 @@ export function App(): React.ReactElement {
   return (
     <CatalogProvider>
       <AppFrame />
+      <WhatsNewGate />
     </CatalogProvider>
   )
 }
@@ -148,7 +162,10 @@ function RouteView({
         catalog={catalog}
         info={info}
         onOpenOutfits={() => navigate('outfits')}
+        onOpenRoom={() => navigate('room')}
         onOpenCatalog={() => navigate('catalog')}
+        onOpenSaves={() => navigate('saves')}
+        onOpenSettings={() => navigate('settings')}
       />
     )
   }
@@ -156,7 +173,14 @@ function RouteView({
     return (
       <SavesPage
         onOpenSave={(save: SaveRecord) => {
-          if (applyOutfitSave(catalog, save)) navigate('outfits')
+          if (applyOutfitSave(catalog, save)) {
+            navigate('outfits')
+            return
+          }
+          if (save.kind === 'room' && isRoomSaveData(save.data)) {
+            setPendingRoomSave(save.data)
+            navigate('room')
+          }
         }}
         onOpenOutfits={() => navigate('outfits')}
       />
@@ -184,6 +208,7 @@ function RouteView({
     )
   }
 
+  if (route === 'room') return <RoomPage />
   if (route === 'catalog') return <CatalogPage catalog={catalog} assets={assets} />
 
   return <OutfitsPage catalog={catalog} assets={assets} faces={faces} />

@@ -1,6 +1,10 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
 import type {
+  EncodeVideoRequest,
+  EncodeVideoResult,
+  ExportPrefs,
+  FfmpegStatus,
   AppInfo,
   AppUpdateCheck,
   AppUpdateDownload,
@@ -46,6 +50,22 @@ const api: DesktopApi = {
     return () => ipcRenderer.removeListener(IPC.updateProgress, listener)
   },
 
+  onResourceUpdated: (callback: (status: ResourceVersionStatus) => void): (() => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, status: ResourceVersionStatus): void =>
+      callback(status)
+    ipcRenderer.on(IPC.resourceUpdated, listener)
+    return () => ipcRenderer.removeListener(IPC.resourceUpdated, listener)
+  },
+
+  rebuildCatalog: (): Promise<ResourceVersionStatus> => ipcRenderer.invoke(IPC.resourceRebuild),
+
+  onResourceProgress: (callback: (progress: { stage: string }) => void): (() => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, progress: { stage: string }): void =>
+      callback(progress)
+    ipcRenderer.on(IPC.resourceProgress, listener)
+    return () => ipcRenderer.removeListener(IPC.resourceProgress, listener)
+  },
+
   saveFile: (request: SaveFileRequest): Promise<SaveFileResult> =>
     ipcRenderer.invoke(IPC.saveFile, request),
   openFile: (request?: OpenFileRequest): Promise<OpenFileResult | null> =>
@@ -54,6 +74,14 @@ const api: DesktopApi = {
     ipcRenderer.invoke(IPC.chooseDirectory),
   writeExportFiles: (request: ExportFilesRequest): Promise<void> =>
     ipcRenderer.invoke(IPC.writeExportFiles, request),
+  ffmpegStatus: (): Promise<FfmpegStatus> => ipcRenderer.invoke(IPC.ffmpegStatus),
+  exportPrefs: (): Promise<ExportPrefs> => ipcRenderer.invoke(IPC.exportPrefs),
+  setExportPrefs: (patch: Partial<ExportPrefs>): Promise<ExportPrefs> =>
+    ipcRenderer.invoke(IPC.setExportPrefs, patch),
+  chooseExportDir: (): Promise<ExportPrefs | null> => ipcRenderer.invoke(IPC.chooseExportDir),
+  revealPath: (path: string): Promise<void> => ipcRenderer.invoke(IPC.revealPath, path),
+  encodeVideo: (request: EncodeVideoRequest): Promise<EncodeVideoResult> =>
+    ipcRenderer.invoke(IPC.encodeVideo, request),
   openExternal: (url: string): Promise<void> => ipcRenderer.invoke(IPC.openExternal, url),
   openDataDir: (): Promise<void> => ipcRenderer.invoke(IPC.openDataDir),
 

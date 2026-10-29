@@ -282,6 +282,7 @@ export function SaleEditor({
   const exportPng = async (): Promise<void> => {
     if (!preview) return
     const saved = await window.pkt.saveFile({
+      useExportDir: true,
       suggestedName: `卖货图-${Date.now()}.png`,
       dataBase64: preview.slice(preview.indexOf(',') + 1),
     })
