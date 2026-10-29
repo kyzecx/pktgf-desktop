@@ -2,6 +2,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 
 import type { Catalog } from '../../shared/contract'
+import { applyPatchToCatalog, type CatalogPatch } from '../../shared/catalog-patch'
 import { dataDir } from './paths'
 
 /**
@@ -13,34 +14,24 @@ import { dataDir } from './paths'
  *
  *   name（如 `furni/dec/dec1417.zip`）,md5
  *
- * 换完之后新图能直接加载（URL 里带 md5），命名/行列/锚点等元数据仍然有效。
- * 目录里没有的全新资源只能统计条数，等下一次重新打包快照。
+ * 纯逻辑在 `shared/catalog-patch.ts`（那里不 import electron，测试可直接跑）。
  */
 
 const HOME = 'https://web.picatown.com/'
 const TIMEOUT_MS = 20_000
 const PATCH_FILE = 'catalog-patch.json'
 
-export interface CatalogPatch {
-  /** 生成补丁时的 Main_*.js（旧于这个版本的快照才会被补） */
-  mainScript: string
-  resourceList: string
-  updatedAt: number
-  /** name → md5 */
-  md5: Record<string, string>
-  patched: number
-  /** 清单里有、目录里没有的文件数（新资源） */
-  added: number
-}
+export type { CatalogPatch }
+export { applyPatchToCatalog }
 
 /** 抓一下官网当前版本标识。 */
 export async function fetchLatestVersion(): Promise<{ mainScript: string; resourceList: string }> {
   const html = await getText(HOME)
-  const mainScript = /Main_[0-9A-Za-z_.]+\.js/.exec(html)?.[0]
+  const mainScript = /Main_[0-9A-Za-z_.]+/.exec(html)?.[0]
   if (!mainScript) throw new Error('首页没有 Main_*.js')
 
   const source = await getText(`${HOME}${mainScript}`)
-  const resourceList = /resource_list_[0-9_]+\.txt/.exec(source)?.[0]
+  const resourceList = /resource_list_[0-9_]+/.exec(source)?.[0]
   if (!resourceList) throw new Error('Main.js 里没有 resource_list')
   return { mainScript, resourceList }
 }
@@ -68,48 +59,6 @@ export async function readCatalogPatch(): Promise<CatalogPatch | null> {
   } catch {
     return null
   }
-}
-
-/**
- * 把补丁应用到目录上（就地改 md5 / meta）。
- *
- * 只在补丁的 `mainScript` 比快照新时应用，避免把旧补丁扣在新快照上。
- */
-export function applyPatchToCatalog(catalog: Catalog, patch: CatalogPatch): number {
-  if (patch.mainScript === catalog.meta.mainScript) return 0
-  let changed = 0
-
-  const fix = (entry: { zip?: string; md5?: string } | null | undefined): void => {
-    if (!entry?.zip) return
-    const next = patch.md5[entry.zip]
-    if (next && next !== entry.md5) {
-      entry.md5 = next
-      changed += 1
-    }
-  }
-
-  for (const entry of catalog.furniture) fix(entry)
-  for (const entry of catalog.items) fix(entry)
-  for (const entry of catalog.faces) fix(entry)
-  for (const entry of catalog.npcs) fix(entry)
-  // 宠物有两套资源（本体 + 蛋）
-  for (const pet of catalog.pets ?? []) {
-    fixPair(pet, 'petZip', 'petMd5', patch, () => {
-      changed += 1
-    })
-    fixPair(pet, 'eggZip', 'eggMd5', patch, () => {
-      changed += 1
-    })
-  }
-
-  if (changed > 0) {
-    catalog.meta = {
-      ...catalog.meta,
-      mainScript: patch.mainScript,
-      resourceList: patch.resourceList,
-    }
-  }
-  return changed
 }
 
 /** 拉最新清单 → 生成补丁 → 落盘。返回补丁本身（无需更新时返回 null）。 */
@@ -157,24 +106,6 @@ export async function buildAndStorePatch(catalog: Catalog): Promise<CatalogPatch
   await mkdir(dataDir(), { recursive: true })
   await writeFile(patchFile(), JSON.stringify(patch), 'utf8')
   return patch
-}
-
-/** 宠物这类「两个字段一对」的条目。 */
-function fixPair(
-  entry: object,
-  zipKey: string,
-  md5Key: string,
-  patch: CatalogPatch,
-  onChanged: () => void,
-): void {
-  const record = entry as Record<string, unknown>
-  const zip = record[zipKey]
-  if (typeof zip !== 'string') return
-  const next = patch.md5[zip]
-  if (next && next !== record[md5Key]) {
-    record[md5Key] = next
-    onChanged()
-  }
 }
 
 function patchFile(): string {

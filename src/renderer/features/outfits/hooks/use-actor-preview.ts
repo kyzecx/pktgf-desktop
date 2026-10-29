@@ -130,8 +130,7 @@ export function useActorPreview(
     const sceneInputs = [catalog, assets, faces, sex, worn, faceCode, custom]
     const previousInputs = sceneInputsRef.current
     const isNewScene =
-      !previousInputs ||
-      sceneInputs.some((value, index) => value !== previousInputs[index])
+      !previousInputs || sceneInputs.some((value, index) => value !== previousInputs[index])
     sceneInputsRef.current = sceneInputs
     if (isNewScene) setStatus('loading')
 

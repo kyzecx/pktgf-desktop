@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
-import { applyPatchToCatalog } from '../src/main/services/resource-patch'
+import { applyPatchToCatalog } from '../src/shared/catalog-patch'
 import type { Catalog } from '../src/shared/contract'
 
 /**
  * 资源增量更新（官方只换 md5 前缀时的原地打补丁）。
+ *
+ * 纯逻辑在 `shared/catalog-patch.ts`：不 import electron，CI（无 Electron 二进制）也能跑。
  *
  * 关键约束：只在补丁**比快照新**时应用，否则会把旧 md5 扣在新快照上。
  */
