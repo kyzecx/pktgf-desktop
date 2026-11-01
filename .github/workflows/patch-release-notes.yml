@@ -49,6 +49,10 @@ jobs:
               with urllib.request.urlopen(request) as response:
                   print('release notes updated:', response.status)
           except urllib.error.HTTPError as error:
-              print('HTTP', error.code, error.read().decode('utf-8', 'replace'))
+              detail = error.read().decode('utf-8', 'replace')
+              print(f'::error::HTTP {error.code} {detail}')
+              raise
+          except Exception as error:
+              print(f'::error::{type(error).__name__}: {error}')
               raise
           PY
