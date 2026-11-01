@@ -112,10 +112,13 @@ jobs:
           name: pktgf-desktop-${{ matrix.artifact }}
           path: |
             release/*.dmg
+            release/*.dmg.blockmap
             release/*.exe
+            release/*.exe.blockmap
             release/*.AppImage
+            release/*.AppImage.blockmap
             release/*.deb
-            release/*.yml
+            release/latest*.yml
           if-no-files-found: ignore
 
   # 所有平台构建完成后，一次性创建 Release 并上传全部资产。

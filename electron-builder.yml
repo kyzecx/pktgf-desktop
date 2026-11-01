@@ -43,7 +43,8 @@ win:
   target:
     - target: nsis
       arch: [x64]
-  artifactName: ${productName}-${version}-${arch}.${ext}
+  # productName 含中文，electron-builder 会把它从文件名里删掉；用 name 保证与 latest.yml 一致
+  artifactName: ${name}-setup-${version}.${ext}
 
 nsis:
   oneClick: false
@@ -56,6 +57,7 @@ linux:
   icon: build/icon.png
   maintainer: kyzecx <1191467250@qq.com>
   syncDesktopName: true
+  artifactName: ${name}-${version}-${arch}.${ext}
   target:
     - AppImage
     - deb
