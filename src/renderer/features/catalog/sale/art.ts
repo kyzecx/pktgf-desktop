@@ -1,14 +1,18 @@
 import { composeSmallActor } from '@engine/index'
-import type { CatalogAssets } from '@shared/contract'
+import type { Catalog, CatalogAssets, CatalogItem, Part } from '@shared/contract'
 import {
   composeFromCatalog,
+  composeSmallFromCatalog,
   getBaseActor,
+  getFaceLook,
+  getFaceMiniImage,
   getSmallBaseActor,
   getSmallCostume,
   toDataUrl,
 } from '@/services/assets'
 import { getSaleIcon } from '../services'
 import type { CatalogEntry } from '../types'
+import type { SaleSubject, SaleTemplate, OutfitSaleSubject } from './model'
 
 export interface SaleArt {
   large?: string
@@ -17,11 +21,23 @@ export interface SaleArt {
   icon?: string
 }
 
-/** 卖货图模板一使用大/小模型；模板二统一使用道具图。 */
+/** 卖货图素材：模板一使用大/小模型，模板二统一使用道具图或整套立绘。 */
 export async function loadSaleArt(
+  subject: SaleSubject,
+  catalog: Catalog,
+  assets: CatalogAssets,
+  template: SaleTemplate,
+): Promise<SaleArt> {
+  if (subject.kind === 'outfit') {
+    return loadOutfitSaleArt(subject, catalog, assets, template)
+  }
+  return loadEntrySaleArt(subject.entry, assets, template)
+}
+
+async function loadEntrySaleArt(
   entry: CatalogEntry,
   assets: CatalogAssets,
-  template: 1 | 2,
+  template: SaleTemplate,
 ): Promise<SaleArt> {
   if (template === 2) {
     const icon = await getSaleIcon(entry)
@@ -60,6 +76,48 @@ export async function loadSaleArt(
     }
   } catch (error) {
     console.warn('[sale] 生成服饰卖货图素材失败', entry.code, error)
+    return {}
+  }
+}
+
+async function loadOutfitSaleArt(
+  subject: OutfitSaleSubject,
+  catalog: Catalog,
+  assets: CatalogAssets,
+  template: SaleTemplate,
+): Promise<SaleArt> {
+  const worn: Partial<Record<Part, CatalogItem>> = {}
+  for (const item of subject.wornItems) worn[item.part] = item
+  const face = catalog.faces.find((entry) => entry.code === subject.faceCode) ?? null
+
+  try {
+    const base = await getBaseActor(subject.sex, assets)
+    const faceLook = await getFaceLook(face, subject.sex)
+    const large = await composeFromCatalog({
+      sex: subject.sex,
+      worn,
+      base,
+      face: faceLook,
+    })
+
+    if (template === 2) return { icon: toDataUrl(large) }
+
+    const [smallBase, smallFace] = await Promise.all([
+      getSmallBaseActor(assets),
+      face ? getFaceMiniImage(face) : Promise.resolve(null),
+    ])
+    const small = await composeSmallFromCatalog({
+      worn,
+      base: smallBase,
+      face: smallFace,
+    })
+    return {
+      large: toDataUrl(large),
+      front: toDataUrl(small.front),
+      back: toDataUrl(small.back),
+    }
+  } catch (error) {
+    console.warn('[sale] 生成搭配存档卖货图素材失败', subject.source.saveId, error)
     return {}
   }
 }

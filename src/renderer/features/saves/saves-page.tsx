@@ -43,9 +43,11 @@ const SORT_OPTIONS = [
 export function SavesPage({
   onOpenSave,
   onOpenOutfits,
+  onMakeSale,
 }: {
   onOpenSave: (save: SaveRecord) => void
   onOpenOutfits: () => void
+  onMakeSale: (save: SaveRecord) => void
 }): React.ReactElement {
   const { saves, put, remove } = useSaves()
   const [query, setQuery] = React.useState('')
@@ -205,6 +207,7 @@ export function SavesPage({
                   key={save.id}
                   save={save}
                   onOpen={() => openSave(save)}
+                  onMakeSale={() => onMakeSale(save)}
                   onDelete={() => void remove(save.id)}
                 />
               ))}
@@ -219,10 +222,12 @@ export function SavesPage({
 function SaveCard({
   save,
   onOpen,
+  onMakeSale,
   onDelete,
 }: {
   save: SaveRecord
   onOpen: () => void
+  onMakeSale: () => void
   onDelete: () => void
 }): React.ReactElement {
   return (
@@ -257,14 +262,26 @@ function SaveCard({
           {save.kind === 'outfit' ? `${outfitItemCount(save)} 件` : '装修存档'}
         </div>
       </button>
-      <button
-        type="button"
-        aria-label="删除存档"
-        onClick={onDelete}
-        className="absolute top-2 right-2 grid size-5 place-items-center rounded-full text-[12px] text-pkt-text-mute opacity-0 transition-opacity group-hover:opacity-100 hover:bg-pkt-danger/20 hover:text-pkt-danger"
-      >
-        ×
-      </button>
+      <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+        {save.kind === 'outfit' ? (
+          <button
+            type="button"
+            onClick={onMakeSale}
+            title="把这套搭配做成卖货图"
+            className="rounded-full border border-pkt-accent/30 bg-surface/90 px-1.5 py-0.5 text-[9px] text-pkt-accent backdrop-blur hover:bg-pkt-accent/10"
+          >
+            卖货图
+          </button>
+        ) : null}
+        <button
+          type="button"
+          aria-label="删除存档"
+          onClick={onDelete}
+          className="grid size-5 place-items-center rounded-full border border-pkt-border/60 bg-surface/90 text-[12px] text-pkt-text-mute backdrop-blur hover:bg-pkt-danger/20 hover:text-pkt-danger"
+        >
+          ×
+        </button>
+      </div>
     </div>
   )
 }

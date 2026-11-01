@@ -1,17 +1,11 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "types": [
-      "node"
-    ],
+    "types": ["node"],
     "baseUrl": ".",
     "paths": {
-      "@shared/*": [
-        "src/shared/*"
-      ],
-      "@engine/*": [
-        "src/engine/*"
-      ]
+      "@shared/*": ["src/shared/*"],
+      "@engine/*": ["src/engine/*"]
     }
   },
   "include": [
@@ -28,6 +22,7 @@
   "exclude": [
     "tools/extract-spec.ts",
     "tools/verify-engine.ts",
-    "tools/fetch-fixtures.ts"
+    "tools/fetch-fixtures.ts",
+    "tests/sale-*.test.ts"
   ]
 }

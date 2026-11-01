@@ -6,6 +6,9 @@ export default defineConfig({
     alias: {
       '@shared': resolve('src/shared'),
       '@engine': resolve('src/engine'),
+      '@ui': resolve('src/renderer/ui'),
+      '@features': resolve('src/renderer/features'),
+      '@': resolve('src/renderer'),
     },
   },
   test: {

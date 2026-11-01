@@ -18,6 +18,7 @@
     "src/renderer/**/*.ts",
     "src/renderer/**/*.tsx",
     "src/shared/**/*.ts",
-    "src/engine/**/*.ts"
+    "src/engine/**/*.ts",
+    "tests/sale-*.test.ts"
   ]
 }

@@ -1,7 +1,7 @@
 import { ButtonRoot, SpinnerRoot } from '@heroui/react'
 import * as React from 'react'
 
-import type { Catalog, CatalogAssets, Part } from '@shared/contract'
+import type { Catalog, CatalogAssets, Part, SaveRecord } from '@shared/contract'
 import { CategoryTabs } from '@features/outfits/components/category-tabs'
 import { usePartIcons } from '@features/outfits/hooks/use-part-icons'
 import { useOutfitStore } from '@features/outfits/state/outfit-store'
@@ -23,6 +23,7 @@ import { setThumbnailAssets } from '@features/outfits/hooks/use-thumbnail'
 import { CatalogCard } from './components/catalog-card'
 import { CatalogDetail } from './components/catalog-detail'
 import { SaleEditor } from './sale/sale-editor'
+import { takePendingSaleOutfits } from './sale/pending-sale-outfits'
 import { useCatalogExport } from './hooks/use-catalog-export'
 import { useFrameSelection } from './hooks/use-frame-selection'
 import { getEntryThumbnail } from './services'
@@ -50,6 +51,7 @@ export function CatalogPage({
   const [selectedKey, setSelectedKey] = React.useState<string | null>(null)
   const [petView, setPetView] = React.useState<PetView>('pet')
   const [saleKeys, setSaleKeys] = React.useState<Set<string>>(new Set())
+  const [pendingSaleSaves, setPendingSaleSaves] = React.useState<SaveRecord[]>([])
   const [saleOpen, setSaleOpen] = React.useState(false)
   const display = useOutfitStore((state) => state.itemDisplay)
   const listColumns = useOutfitStore((state) => state.listColumns)
@@ -59,6 +61,14 @@ export function CatalogPage({
   const { state, start, startOriginals, startGif, cancel, reset } = useCatalogExport()
   const searchRef = React.useRef<HTMLInputElement | null>(null)
   const recent = useRecentItems('catalog')
+
+  React.useEffect(() => {
+    // 从存档页「卖货图」跳进来：挂载后取一次交接数据并打开编辑器。
+    const saves = takePendingSaleOutfits()
+    if (saves.length === 0) return
+    setPendingSaleSaves(saves)
+    setSaleOpen(true)
+  }, [])
 
   React.useEffect(() => {
     setThumbnailAssets(assets)
@@ -375,8 +385,20 @@ export function CatalogPage({
         <SaleEditor
           entries={saleEntries}
           allEntries={allEntries}
+          catalog={catalog}
           assets={assets}
-          onClose={() => setSaleOpen(false)}
+          initialSaves={pendingSaleSaves}
+          onRemoveEntry={(key) =>
+            setSaleKeys((current) => {
+              const next = new Set(current)
+              next.delete(key)
+              return next
+            })
+          }
+          onClose={() => {
+            setPendingSaleSaves([])
+            setSaleOpen(false)
+          }}
         />
       ) : null}
 

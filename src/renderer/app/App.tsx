@@ -11,6 +11,7 @@ import { RoomPage } from '@features/room/room-page'
 import { SettingsPage } from '@features/settings/settings-page'
 import { SavesPage } from '@features/saves/saves-page'
 import { applyOutfitSave } from '@features/outfits/state/outfit-save'
+import { setPendingSaleOutfits } from '@features/catalog/sale/pending-sale-outfits'
 import { isRoomSaveData, setPendingRoomSave } from '@features/room/state/pending-room-save'
 import {
   IconBook,
@@ -181,6 +182,10 @@ function RouteView({
             setPendingRoomSave(save.data)
             navigate('room')
           }
+        }}
+        onMakeSale={(save: SaveRecord) => {
+          setPendingSaleOutfits([save])
+          navigate('catalog')
         }}
         onOpenOutfits={() => navigate('outfits')}
       />
