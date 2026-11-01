@@ -96,4 +96,14 @@ jobs:
       - name: Update release notes
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release edit "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --notes-file RELEASE_NOTES.md
+        run: |
+          # electron-builder 发布完成后 GitHub 偶尔会短暂拒绝编辑，重试几次。
+          sleep 5
+          for attempt in 1 2 3 4 5; do
+            if gh release edit "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --notes-file RELEASE_NOTES.md; then
+              exit 0
+            fi
+            echo "update release notes failed (attempt ${attempt}), retrying..."
+            sleep $((attempt * 5))
+          done
+          exit 1

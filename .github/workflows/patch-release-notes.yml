@@ -1,0 +1,32 @@
+name: Patch release notes
+
+# 一次性工作流：补齐 v0.4.1 的 GitHub Release 说明。
+# 手动删除本文件即可，不会影响后续发布。
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/patch-release-notes.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update v0.4.1 release notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for attempt in 1 2 3 4 5; do
+            if gh release edit v0.4.1 --repo "${GITHUB_REPOSITORY}" --notes-file RELEASE_NOTES.md; then
+              exit 0
+            fi
+            echo "update release notes failed (attempt ${attempt}), retrying..."
+            sleep $((attempt * 5))
+          done
+          exit 1
